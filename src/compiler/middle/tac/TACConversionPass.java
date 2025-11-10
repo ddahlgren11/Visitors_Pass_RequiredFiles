@@ -1,5 +1,11 @@
 package compiler.middle.tac;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import compiler.frontend.BinaryOpNode;
+import compiler.frontend.ast.ASTNode;
+
 public class TACConversionPass implements TACVisitor<String> {
 
     private final List<TACInstruction> instructions = new ArrayList<>();
