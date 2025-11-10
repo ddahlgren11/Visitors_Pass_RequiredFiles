@@ -14,7 +14,7 @@ public class TypeCheckingVisitor implements ASTVisitor<Void> {
         return null;
     }
 
-    public Void visit(AssignmentNode node) {
+    public Void visit(AssignmentNode node) { //change
         node.getTarget().accept(this);
         node.getValue().accept(this);
         return null;
