@@ -1,0 +1,2 @@
+int x = 10;
+boolean y = x + 5;  // type error: assigning int expression to boolean

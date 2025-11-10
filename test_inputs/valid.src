@@ -1,0 +1,9 @@
+int count = 0;
+boolean ready = false;
+
+void main() {
+    count = count + 1;
+    if (count == 1) {
+        ready = true;
+    }
+}

@@ -1,0 +1,107 @@
+🟢 Running pass: FrontEndPass (Lexing + Parsing)
+=== Starting FrontEndPass ===
+Parsing (best-effort) completed.
+=== Finished FrontEndPass ===
+✅ Completed pass: FrontEndPass (Lexing + Parsing)
+🟢 Running pass: SymbolTableBuilderPass
+[2025-10-30T04:47:44.582591762] === Starting SymbolTableBuilderPass ===
+[2025-10-30T04:47:44.583313095] Created symbol table with global scope.
+[2025-10-30T04:47:44.583478345] Building symbol table from legacy frontend AST...
+[2025-10-30T04:47:44.585585512] Symbol table complete: 1 scope(s).
+✅ Completed pass: SymbolTableBuilderPass
+🟢 Running pass: FrontEndPass (Lexing + Parsing)
+=== Starting FrontEndPass ===
+Parsing (best-effort) completed.
+=== Finished FrontEndPass ===
+✅ Completed pass: FrontEndPass (Lexing + Parsing)
+🟢 Running pass: SymbolTableBuilderPass
+[2025-10-30T04:47:44.590686845] === Starting SymbolTableBuilderPass ===
+[2025-10-30T04:47:44.590820678] Created symbol table with global scope.
+[2025-10-30T04:47:44.59103122] Building symbol table from legacy frontend AST...
+[2025-10-30T04:47:44.591316012] Symbol table complete: 1 scope(s).
+✅ Completed pass: SymbolTableBuilderPass
+🟢 Running pass: TypeCheckingPass
+✅ Completed pass: TypeCheckingPass
+🟢 Running pass: FrontEndPass (Lexing + Parsing)
+=== Starting FrontEndPass ===
+Parsing (best-effort) completed.
+=== Finished FrontEndPass ===
+✅ Completed pass: FrontEndPass (Lexing + Parsing)
+🟢 Running pass: SymbolTableBuilderPass
+[2025-10-30T04:47:44.593653887] === Starting SymbolTableBuilderPass ===
+[2025-10-30T04:47:44.593822262] Created symbol table with global scope.
+[2025-10-30T04:47:44.593946762] Building symbol table from legacy frontend AST...
+[2025-10-30T04:47:44.594141553] Symbol table complete: 1 scope(s).
+✅ Completed pass: SymbolTableBuilderPass
+🟢 Running pass: TypeCheckingPass
+✅ Completed pass: TypeCheckingPass
+🟢 Running pass: FrontEndPass (Lexing + Parsing)
+=== Starting FrontEndPass ===
+Parsing (best-effort) completed.
+=== Finished FrontEndPass ===
+✅ Completed pass: FrontEndPass (Lexing + Parsing)
+🟢 Running pass: SymbolTableBuilderPass
+[2025-10-30T04:47:44.595741262] === Starting SymbolTableBuilderPass ===
+[2025-10-30T04:47:44.59588872] Created symbol table with global scope.
+[2025-10-30T04:47:44.596055512] Building symbol table from legacy frontend AST...
+[2025-10-30T04:47:44.596309345] Symbol table complete: 1 scope(s).
+✅ Completed pass: SymbolTableBuilderPass
+🟢 Running pass: TypeCheckingPass
+✅ Completed pass: TypeCheckingPass
+🟢 Running pass: FrontEndPass (Lexing + Parsing)
+=== Starting FrontEndPass ===
+Parsing (best-effort) completed.
+=== Finished FrontEndPass ===
+✅ Completed pass: FrontEndPass (Lexing + Parsing)
+🟢 Running pass: SymbolTableBuilderPass
+[2025-10-30T04:47:44.601051553] === Starting SymbolTableBuilderPass ===
+[2025-10-30T04:47:44.601200345] Created symbol table with global scope.
+[2025-10-30T04:47:44.601312845] Building symbol table from legacy frontend AST...
+[2025-10-30T04:47:44.60150922] Symbol table complete: 1 scope(s).
+✅ Completed pass: SymbolTableBuilderPass
+🟢 Running pass: TypeCheckingPass
+✅ Completed pass: TypeCheckingPass
+🟢 Running pass: FrontEndPass (Lexing + Parsing)
+=== Starting FrontEndPass ===
+Parsing (best-effort) completed.
+=== Finished FrontEndPass ===
+✅ Completed pass: FrontEndPass (Lexing + Parsing)
+🟢 Running pass: SymbolTableBuilderPass
+✅ Completed pass: SymbolTableBuilderPass
+🟢 Running pass: TypeCheckingPass
+✅ Completed pass: TypeCheckingPass
+[2025-10-30T04:47:44.605085887] === Starting SymbolTableBuilderPass ===
+[2025-10-30T04:47:44.605206262] Created symbol table with global scope.
+[2025-10-30T04:47:44.605350345] Building symbol table from legacy frontend AST...
+[2025-10-30T04:47:44.605572012] Symbol table complete: 1 scope(s).
+
+Thanks for using JUnit! Support its development at https://junit.org/sponsoring
+
+[36m╷[0m
+[36m├─[0m [36mJUnit Jupiter[0m [32m✔[0m
+[36m│  ├─[0m [36mMainTest[0m [32m✔[0m
+[36m│  │  ├─[0m [34mtestSymbolTableIsBuilt()[0m [32m✔[0m
+[36m│  │  ├─[0m [34mtestTypeCheckerReportsErrors()[0m [32m✔[0m
+[36m│  │  ├─[0m [34mtestCompilerPipelineRunsSuccessfully()[0m [32m✔[0m
+[36m│  │  ├─[0m [34mtestNoErrorsForValidProgram()[0m [32m✔[0m
+[36m│  │  └─[0m [34mtestStudentsShouldAddMoreCases()[0m [32m✔[0m
+[36m│  └─[0m [36mDiagnosticsTest[0m [32m✔[0m
+[36m│     ├─[0m [34mtestUndeclaredVariableReported()[0m [32m✔[0m
+[36m│     ├─[0m [34mtestTypeCheckingReportsErrorFromFile()[0m [32m✔[0m
+[36m│     └─[0m [34mtestParsingAndSymbolTableFromFile()[0m [32m✔[0m
+[36m└─[0m [36mJUnit Vintage[0m [32m✔[0m
+
+Test run finished after 63 ms
+[         4 containers found      ]
+[         0 containers skipped    ]
+[         4 containers started    ]
+[         0 containers aborted    ]
+[         4 containers successful ]
+[         0 containers failed     ]
+[         8 tests found           ]
+[         0 tests skipped         ]
+[         8 tests started         ]
+[         0 tests aborted         ]
+[         8 tests successful      ]
+[         0 tests failed          ]
+

@@ -1,0 +1,311 @@
+options {
+    STATIC = false;
+    PARSER_PACKAGE = "compiler.frontend";
+}
+
+package compiler.frontend;
+
+
+PARSER_BEGIN(MyParser)
+
+import java.util.*;
+import ast.*;   // NEW: import your AST node classes
+
+public class MyParser {
+    public static void main(String[] args) throws ParseException {
+        MyParser parser = new MyParser(System.in);
+        ASTNode prog = parser.Program();
+        System.out.println(prog.toASTTestTree().toString());
+    }
+
+    public MyParser(java.io.Reader reader) {
+        this(new SimpleCharStream(reader, 1, 1));
+    }
+}
+
+PARSER_END(MyParser)
+
+// ---------- Tokens ----------
+SKIP : { " " | "\t" | "\n" | "\r" }
+SKIP : { < "//" (~["\n"])* ("\n"|"\r"|"\r\n") > }
+SKIP : { < "/*" (~["*"] | "*" ~"/")* "*/" > }
+
+TOKEN : { < IF: "if" > }
+TOKEN : { < ELSE: "else" > }
+TOKEN : { < WHILE: "while" > }
+TOKEN : { < FOR: "for" > }
+TOKEN : { < VOID: "void" > }
+TOKEN : { < RETURN: "return" > }
+TOKEN : { < INT: "int" > }
+TOKEN : { < TRUE: "true" > }
+TOKEN : { < FALSE: "false" > }
+TOKEN : { < NULL: "null" > }
+TOKEN : { < NEW: "new" > }     
+
+TOKEN : { < INT_LITERAL: (["0"-"9"])+ > }
+TOKEN : { < STRING_LITERAL: "\"" (~["\"","\\"])* "\"" > }
+
+TOKEN : { < EQ: "==" > }
+TOKEN : { < ASSIGN: "=" > }
+TOKEN : { < INCR: "++" > }
+TOKEN : { < DECR: "--" > }
+TOKEN : { < PLUS: "+" > }
+TOKEN : { < MINUS: "-" > }
+TOKEN : { < MULT: "*" > }
+TOKEN : { < DIV: "/" > }
+TOKEN : { < LT: "<" > }
+TOKEN : { < GT: ">" > }
+TOKEN : { < NEQ: "!=" > }
+TOKEN : { < AND: "&&" > }
+TOKEN : { < OR: "||" > }
+TOKEN : { < DOT: "." > }
+TOKEN : { < LPAREN: "(" > }
+TOKEN : { < RPAREN: ")" > }
+TOKEN : { < LBRACE: "{" > }
+TOKEN : { < RBRACE: "}" > }
+TOKEN : { < SEMI: ";" > }
+TOKEN : { < COMMA: "," > }
+
+TOKEN : { < IDENTIFIER: (<LETTER>)(<LETTER>|<DIGIT>)* > }
+< #LETTER: ["a"-"z","A"-"Z","_"] >
+< #DIGIT: ["0"-"9"] >
+
+// ---------- Program ----------
+ASTNode Program() :
+{
+    List<ASTNode> stmts = new ArrayList<>();
+    ASTNode s;
+}
+{
+    ( s=Statement() { stmts.add(s); } )* <EOF>
+    {
+        return new BlockNode(stmts);
+    }
+}
+
+// ---------- Statements ----------
+ASTNode Statement() :
+{
+    ASTNode n;
+}
+{
+      n=VarDecl()       { return n; }
+    | n=Assignment()    { return n; }
+    | n=IfStmt()        { return n; }
+    | n=WhileStmt()     { return n; }
+    | n=ForStmt()       { return n; }
+    | n=Block()         { return n; }
+    | n=FunctionDecl()  { return n; }
+    | n=ReturnStmt()    { return n; }
+    | n=ExprStmt()      { return n; }
+    | <SEMI>            { return new EmptyNode(); }
+}
+
+// Return
+ASTNode ReturnStmt() :
+{
+    ASTNode expr = null;
+}
+{
+    <RETURN> (expr=Expression())? <SEMI>
+    {
+        return new ReturnNode(expr);
+    }
+}
+
+// Declaration
+ASTNode VarDecl() :
+{
+    Token t; Token id; ASTNode expr = null;
+}
+{
+    (t=<INT> | t=<IDENTIFIER>) id=<IDENTIFIER> ( <ASSIGN> expr=Expression() )? <SEMI>
+    {
+        return new VarDeclNode(t.image, id.image, expr);
+    }
+}
+
+// Assignment
+ASTNode Assignment() :
+{
+    Token id; ASTNode expr;
+}
+{
+    id=<IDENTIFIER> <ASSIGN> expr=Expression() <SEMI>
+    {
+        return new AssignmentNode(new IdentifierNode(id.image), expr);
+    }
+}
+
+// Expr stmt
+ASTNode ExprStmt() :
+{
+    ASTNode e;
+}
+{
+    LOOKAHEAD({ getToken(1).kind != RETURN })
+    e=Expression() <SEMI> { return e; }
+}
+
+// ---------- Expressions ----------
+ASTNode Expression() : { ASTNode n; } { n=LogicalOr() { return n; } }
+
+ASTNode LogicalOr() :
+{
+    ASTNode left, right; Token op;
+}
+{
+    left=LogicalAnd() ( op=<OR> right=LogicalAnd()
+        { left = new BinaryOpNode(op.image, left, right); }
+    )*
+    { return left; }
+}
+
+ASTNode LogicalAnd() :
+{
+    ASTNode left, right; Token op;
+}
+{
+    left=Equality() ( op=<AND> right=Equality()
+        { left = new BinaryOpNode(op.image, left, right); }
+    )*
+    { return left; }
+}
+
+ASTNode Equality() :
+{
+    ASTNode left, right; Token op;
+}
+{
+    left=Relational() ( op=(<EQ>|<NEQ>) right=Relational()
+        { left = new BinaryOpNode(op.image, left, right); }
+    )*
+    { return left; }
+}
+
+ASTNode Relational() :
+{
+    ASTNode left, right; Token op;
+}
+{
+    left=Additive() ( op=(<LT>|<GT>) right=Additive()
+        { left = new BinaryOpNode(op.image, left, right); }
+    )*
+    { return left; }
+}
+
+ASTNode Additive() :
+{
+    ASTNode left, right; Token op;
+}
+{
+    left=Term() ( op=(<PLUS>|<MINUS>) right=Term()
+        { left = new BinaryOpNode(op.image, left, right); }
+    )*
+    { return left; }
+}
+
+ASTNode Term() :
+{
+    ASTNode left, right; Token op;
+}
+{
+    left=Factor() ( op=(<MULT>|<DIV>) right=Factor()
+        { left = new BinaryOpNode(op.image, left, right); }
+    )*
+    { return left; }
+}
+
+ASTNode Factor() :
+{
+    Token t; ASTNode e;
+}
+{
+      t=<INT_LITERAL>     { return new LiteralNode(t.image); }
+    | t=<STRING_LITERAL>  { return new LiteralNode(t.image); }
+    | t=<TRUE>            { return new LiteralNode("true"); }
+    | t=<FALSE>           { return new LiteralNode("false"); }
+    | t=<NULL>            { return new LiteralNode("null"); }
+    | t=<IDENTIFIER>
+        (
+            <INCR> { return new UnaryOpNode("post++", new IdentifierNode(t.image)); }
+          | <DECR> { return new UnaryOpNode("post--", new IdentifierNode(t.image)); }
+          |        { return new IdentifierNode(t.image); }
+        )
+    | <LPAREN> e=Expression() <RPAREN> { return e; }
+}
+
+// ---------- Control Structures ----------
+ASTNode IfStmt() :
+{
+    ASTNode cond, thenBlock, elseBlock=null;
+}
+{
+    <IF> <LPAREN> cond=Expression() <RPAREN> thenBlock=Statement()
+    ( <ELSE> elseBlock=Statement() )?
+    {
+        return new IfNode(cond, thenBlock, elseBlock);
+    }
+}
+
+ASTNode WhileStmt() :
+{
+    ASTNode cond, body;
+}
+{
+    <WHILE> <LPAREN> cond=Expression() <RPAREN> body=Statement()
+    {
+        return new WhileNode(cond, body);
+    }
+}
+
+ASTNode ForStmt() :
+{
+    ASTNode init=null, cond=null, update=null, body;
+}
+{
+    <FOR> <LPAREN>
+        ( init=VarDecl() | init=Assignment() | <SEMI> ) 
+        cond=Expression()? <SEMI>
+        update=Expression()? <RPAREN>
+        body=Statement()
+    {
+        return new ForNode(init, cond, update, body);
+    }
+}
+
+ASTNode Block() :
+{
+    List<ASTNode> stmts = new ArrayList<>(); ASTNode s;
+}
+{
+    <LBRACE> ( s=Statement() { stmts.add(s); } )* <RBRACE>
+    {
+        return new BlockNode(stmts);
+    }
+}
+
+ASTNode FunctionDecl() :
+{
+    Token t; Token id; List<VarDeclNode> params = new ArrayList<>(); ASTNode body;
+}
+{
+    (t=<VOID> | t=<INT> | t=<IDENTIFIER>) id=<IDENTIFIER>
+    <LPAREN> ( params=ParamList() )? <RPAREN> body=Block()
+    {
+        return new FunctionDeclNode(t.image, id.image, params, body);
+    }
+}
+
+List<VarDeclNode> ParamList() :
+{
+    List<VarDeclNode> params = new ArrayList<>(); Token t, id;
+}
+{
+    t=(<INT>|<IDENTIFIER>) id=<IDENTIFIER>
+    { params.add(new VarDeclNode(t.image, id.image, null)); }
+    ( <COMMA> t=(<INT>|<IDENTIFIER>) id=<IDENTIFIER>
+      { params.add(new VarDeclNode(t.image, id.image, null)); }
+    )*
+    { return params; }
+}
