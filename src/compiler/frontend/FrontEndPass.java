@@ -6,7 +6,6 @@ import compiler.infra.Diagnostics;
 
 import java.io.InputStream;
 import java.util.Collections;
-import compiler.frontend.BlockNode;
 
 /**
  * FrontEndPass

@@ -1,8 +1,6 @@
 package compiler.middle;
 
-import compiler.middle.ast.AssignmentNode;
-import compiler.middle.ast.FunctionDeclNode;
-import compiler.middle.ast.VarDeclNode;
+import compiler.frontend.ast.*;
 
 /**
  * The Visitor interface for the AST.

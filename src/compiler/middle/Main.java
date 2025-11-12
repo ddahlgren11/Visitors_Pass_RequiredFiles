@@ -1,10 +1,6 @@
 package compiler.middle;
 
-import compiler.middle.ast.AssignmentNode;
-import compiler.middle.ast.FunctionDeclNode;
-import compiler.middle.ast.VarDeclNode;
-import compiler.middle.ast.LiteralNode;
-import compiler.middle.ast.IdentifierNode;
+import compiler.frontend.ast.*;
 
 import java.util.List;
 import java.util.Arrays;

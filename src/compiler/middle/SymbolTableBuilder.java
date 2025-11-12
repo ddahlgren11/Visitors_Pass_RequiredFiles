@@ -1,9 +1,6 @@
 package compiler.middle;
 
-import compiler.middle.ast.AssignmentNode;
-import compiler.middle.ast.FunctionDeclNode;
-import compiler.middle.ast.VarDeclNode;
-
+import compiler.frontend.ast.*;
 import java.util.List;
 
 /**
@@ -30,7 +27,7 @@ public class SymbolTableBuilder implements NodeVisitor {
      */
     @Override
     public void visit(VarDeclNode node) {
-        String varName = node.getVarName();
+        String varName = node.getName();
         Symbol symbol = new Symbol(varName, Kind.VARIABLE, node);
 
         if (!table.declare(symbol)) {
@@ -49,7 +46,7 @@ public class SymbolTableBuilder implements NodeVisitor {
      */
     @Override
     public void visit(AssignmentNode node) {
-        String varName = node.getVarName();
+        String varName = node.getName();
 
         if (table.lookup(varName).isEmpty()) {
             System.err.printf("Semantic Error: Variable '%s' used but not declared.%n", varName);

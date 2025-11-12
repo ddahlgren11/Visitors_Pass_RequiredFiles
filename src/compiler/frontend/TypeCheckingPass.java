@@ -1,3 +1,4 @@
+package compiler.frontend;
 
 import compiler.infra.*;
 import compiler.middle.*;
