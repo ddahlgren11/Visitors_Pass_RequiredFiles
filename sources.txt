@@ -10,12 +10,6 @@
 ./src/compiler/middle/SymbolTableImpl.java
 ./src/compiler/middle/Symbol.java
 ./src/compiler/middle/Main.java
-./src/compiler/middle/ast/VarDeclNode.java
-./src/compiler/middle/ast/AssignmentNode.java
-./src/compiler/middle/ast/IdentifierNode.java
-./src/compiler/middle/ast/ASTNodes.java
-./src/compiler/middle/ast/FunctionDeclNode.java
-./src/compiler/middle/ast/LiteralNode.java
 ./src/compiler/middle/ScopeInfo.java
 ./src/compiler/middle/NodeVisitor.java
 ./src/compiler/infra/SourceLocation.java
@@ -31,7 +25,6 @@
 ./src/compiler/frontend/BinaryOpNode.java
 ./src/compiler/frontend/FrontEndPass.java
 ./src/compiler/frontend/ParseException.java
-./src/compiler/frontend/ASTVisitor.java
 ./src/compiler/frontend/visitor/TypeCheckingVisitor.java
 ./src/compiler/frontend/visitor/SymbolTableBuilderVisitor.java
 ./src/compiler/frontend/Main.java
