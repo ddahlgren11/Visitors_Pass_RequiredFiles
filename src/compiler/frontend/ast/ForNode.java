@@ -1,10 +1,10 @@
 package compiler.frontend.ast;
 
 public class ForNode extends StatementNode {
-    private final StatementNode init;
-    private final ExpressionNode cond;
-    private final StatementNode update;
-    private final BlockNode body;
+    public final StatementNode init;
+    public final ExpressionNode cond;
+    public final StatementNode update;
+    public final BlockNode body;
 
     public ForNode(StatementNode init, ExpressionNode cond, StatementNode update, BlockNode body) {
         this.init = init; this.cond = cond; this.update = update; this.body = body;
@@ -15,5 +15,5 @@ public class ForNode extends StatementNode {
     public StatementNode getUpdate() { return update; }
     public BlockNode getBody() { return body; }
 
-    @Override public <T> T accept(ASTVisitor<T> visitor) { return visitor.visit(this); }
+    @Override public void accept(ASTVisitor visitor) { visitor.visitForNode(this); }
 }

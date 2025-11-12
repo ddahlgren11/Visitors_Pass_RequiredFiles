@@ -8,7 +8,5 @@ import compiler.middle.tac.TACConversionPass;
  */
 public abstract class ASTNode {
     /** Accept a visitor and return a visitor-defined result. */
-    public abstract <T> T accept(ASTVisitor<T> visitor);
-
-    protected abstract void accept(TACConversionPass tacConversionPass);
+    public abstract void accept(ASTVisitor visitor);
 }

@@ -5,62 +5,69 @@ import compiler.frontend.ast.*;
  * Example type checking visitor stub. Real implementation should track types
  * and report errors to Diagnostics.
  */
-public class TypeCheckingVisitor implements ASTVisitor<Void> {
+public class TypeCheckingVisitor implements ASTVisitor {
 
-    public Void visit(BinaryExprNode node) {
-        node.getLeft().accept(this);
-        node.getRight().accept(this);
+    @Override
+    public void visitBinaryExprNode(BinaryExprNode node) {
+        node.left.accept(this);
+        node.right.accept(this);
         // In a real checker, check operand types and set expression type
-        return null;
     }
 
-    public Void visit(AssignmentNode node) { //change
-        node.getTarget().accept(this);
-        node.getValue().accept(this);
-        return null;
+    @Override
+    public void visitAssignmentNode(AssignmentNode node) { //change
+        node.target.accept(this);
+        node.expression.accept(this);
     }
 
-    public Void visit(VarDeclNode node) {
-        if (node.getInit() != null) node.getInit().accept(this);
-        return null;
+    @Override
+    public void visitVarDeclNode(VarDeclNode node) {
+        if (node.initializer != null) node.initializer.accept(this);
     }
 
-    public Void visit(LiteralNode node) { return null; }
-    public Void visit(IdentifierNode node) { return null; }
+    @Override
+    public void visitLiteralNode(LiteralNode node) { }
+    @Override
+    public void visitIdentifierNode(IdentifierNode node) { }
 
-    public Void visit(BlockNode node) {
-        for (ASTNode s : node.getStatements()) s.accept(this);
-        return null;
+    @Override
+    public void visitBlockNode(BlockNode node) {
+        for (ASTNode s : node.statements) s.accept(this);
     }
 
-    public Void visit(FunctionDeclNode node) {
-        if (node.getBody() != null) node.getBody().accept(this);
-        return null;
+    @Override
+    public void visitFunctionDeclNode(FunctionDeclNode node) {
+        if (node.body != null) node.body.accept(this);
     }
 
-    public Void visit(ReturnNode node) {
-        if (node.getExpr() != null) node.getExpr().accept(this);
-        return null;
+    @Override
+    public void visitReturnNode(ReturnNode node) {
+        if (node.expr != null) node.expr.accept(this);
     }
 
-    public Void visit(IfNode node) {
-        node.getCond().accept(this);
-        if (node.getThenBlock() != null) node.getThenBlock().accept(this);
-        if (node.getElseBlock() != null) node.getElseBlock().accept(this);
-        return null;
+    @Override
+    public void visitIfNode(IfNode node) {
+        node.cond.accept(this);
+        if (node.thenBlock != null) node.thenBlock.accept(this);
+        if (node.elseBlock != null) node.elseBlock.accept(this);
     }
 
-    public Void visit(ForNode node) {
-        if (node.getInit() != null) node.getInit().accept(this);
-        if (node.getCond() != null) node.getCond().accept(this);
-        if (node.getUpdate() != null) node.getUpdate().accept(this);
-        if (node.getBody() != null) node.getBody().accept(this);
-        return null;
+    @Override
+    public void visitForNode(ForNode node) {
+        if (node.init != null) node.init.accept(this);
+        if (node.cond != null) node.cond.accept(this);
+        if (node.update != null) node.update.accept(this);
+        if (node.body != null) node.body.accept(this);
     }
 
-    public Void visit(WhileNode node) {
-        if (node.getCond() != null) node.getCond().accept(this);
-        if (node.getBody() != null) node.getBody().accept(this);
-        return null;
+    @Override
+    public void visitWhileNode(WhileNode node) {
+        if (node.cond != null) node.cond.accept(this);
+        if (node.body != null) node.body.accept(this);
+    }
+
+    @Override
+    public void visitBinaryOpNode(BinaryOpNode node) {
+        // TODO Auto-generated method stub
     }
 }

@@ -1,5 +1,7 @@
 import compiler.infra.*;
-import compiler.frontend.*;
+import compiler.frontend.ast.*;
+import compiler.frontend.FrontEndPass;
+import compiler.frontend.SymbolTableBuilderPass;
 import org.junit.jupiter.api.*;
 
 import java.io.ByteArrayInputStream;

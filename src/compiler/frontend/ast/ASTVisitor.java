@@ -2,18 +2,19 @@ package compiler.frontend.ast;
 
 /**
  * Generic visitor interface for the frontend AST.
- * @param <T> visitor resulvoid type
+ * @param <T> visitor result type
  */
 public interface ASTVisitor {
-    void visit(BinaryExprNode node);
-    void visit(AssignmentNode node);
-    void visit(VarDeclNode node);
-    void visit(LiteralNode node);
-    void visit(IdentifierNode node);
-    void visit(BlockNode node);
-    void visit(FunctionDeclNode node);
-    void visit(ReturnNode node);
-    void visit(IfNode node);
-    void visit(ForNode node);
-    void visit(WhileNode node);
+    void visitBinaryExprNode(BinaryExprNode node);
+    void visitBinaryOpNode(BinaryOpNode node);
+    void visitAssignmentNode(AssignmentNode node);
+    void visitVarDeclNode(VarDeclNode node);
+    void visitLiteralNode(LiteralNode node);
+    void visitIdentifierNode(IdentifierNode node);
+    void visitBlockNode(BlockNode node);
+    void visitFunctionDeclNode(FunctionDeclNode node);
+    void visitReturnNode(ReturnNode node);
+    void visitIfNode(IfNode node);
+    void visitForNode(ForNode node);
+    void visitWhileNode(WhileNode node);
 }
