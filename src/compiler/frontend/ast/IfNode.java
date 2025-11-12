@@ -13,5 +13,5 @@ public class IfNode extends StatementNode {
     public BlockNode getThenBlock() { return thenBlock; }
     public BlockNode getElseBlock() { return elseBlock; }
 
-    @Override public <T> T accept(ASTVisitor<T> visitor) { return visitor.visit(this); }
+    @Override public void accept(ASTVisitor visitor) { visitor.visit(this); }
 }

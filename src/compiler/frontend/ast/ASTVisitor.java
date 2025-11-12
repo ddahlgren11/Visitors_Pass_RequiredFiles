@@ -2,7 +2,6 @@ package compiler.frontend.ast;
 
 /**
  * Generic visitor interface for the frontend AST.
- * @param <T> visitor resulvoid type
  */
 public interface ASTVisitor {
     void visit(BinaryExprNode node);

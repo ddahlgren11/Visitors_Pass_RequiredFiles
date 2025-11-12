@@ -15,5 +15,5 @@ public class ForNode extends StatementNode {
     public StatementNode getUpdate() { return update; }
     public BlockNode getBody() { return body; }
 
-    @Override public <T> T accept(ASTVisitor<T> visitor) { return visitor.visit(this); }
+    @Override public void accept(ASTVisitor visitor) { visitor.visit(this); }
 }

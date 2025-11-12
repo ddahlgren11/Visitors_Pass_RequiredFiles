@@ -12,5 +12,5 @@ public class AssignmentNode extends StatementNode {
     public ExpressionNode getTarget() { return target; }
     public ExpressionNode getValue() { return value; }
 
-    @Override public <T> T accept(ASTVisitor<T> visitor) { return visitor.visit(this); }
+    @Override public void accept(ASTVisitor visitor) { visitor.visit(this); }
 }

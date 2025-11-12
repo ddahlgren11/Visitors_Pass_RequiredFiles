@@ -4,6 +4,9 @@ import java.io.InputStream;
 import compiler.frontend.ASTNodeBase;
 import compiler.middle.SymbolTable;
 import compiler.middle.SymbolTableImpl;
+import compiler.middle.tac.TACInstruction;
+
+import java.util.List;
 
 /**
  * Shared compiler state that passes can read or modify.
@@ -64,5 +67,13 @@ public class CompilerContext {
         return symbolTable;
     }
 
-    // Add fields like tokens, ASTNode, IR, symbol tables, etc. Whatever you need to make your compiler work
+    private List<TACInstruction> tac;
+
+    public void setTac(List<TACInstruction> tac) {
+        this.tac = tac;
+    }
+
+    public List<TACInstruction> getTac() {
+        return tac;
+    }
 }

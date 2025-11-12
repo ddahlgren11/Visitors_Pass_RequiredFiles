@@ -1,5 +1,5 @@
 package compiler.frontend.ast;
-
+import compiler.frontend.ASTNode;
 import java.util.List;
 
 public class FunctionDeclNode extends ASTNode {
@@ -17,5 +17,5 @@ public class FunctionDeclNode extends ASTNode {
     public List<VarDeclNode> getParams() { return params; }
     public BlockNode getBody() { return body; }
 
-    @Override public <T> T accept(ASTVisitor<T> visitor) { return visitor.visit(this); }
+    @Override public void accept(ASTVisitor visitor) { visitor.visit(this); }
 }

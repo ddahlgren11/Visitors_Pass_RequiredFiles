@@ -1,10 +1,27 @@
 package compiler.middle.tac;
 
 public enum OpCode {
-    LOAD_CONST,
-    STORE_VAR,
+    // Binary Operations
     ADD,
     SUB,
     MUL,
-    DIV
+    DIV,
+
+    // Memory Operations
+    LOAD_CONST,
+    STORE_VAR,
+    LOAD_VAR,
+
+    // Control Flow
+    JUMP,
+    JUMP_IF_ZERO,
+    LABEL,
+
+    // Function Calls
+    CALL,
+    RETURN,
+    PARAM,
+
+    // No operation
+    NOOP
 }

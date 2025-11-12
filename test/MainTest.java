@@ -172,4 +172,54 @@ public class MainTest {
         // Example: assertTrue(context.getDiagnostics().hasErrors());
         assertTrue(true, "Placeholder for type checking error test.");
     }
+
+    @Test
+    void testTACConversionPassRunsAndGeneratesTAC() {
+        String source = "int x = 5 + 3;";
+        ByteArrayInputStream input = new ByteArrayInputStream(source.getBytes(StandardCharsets.UTF_8));
+        context.setInputStream(input);
+
+        orchestrator.addPass(new FrontEndPass());
+        orchestrator.addPass(new SymbolTableBuilderPass());
+        orchestrator.addPass(new TypeCheckingPass());
+        orchestrator.addPass(new compiler.middle.TACConversionPass());
+
+        assertDoesNotThrow(() -> orchestrator.runPasses(context));
+        assertNotNull(context.getTac());
+        assertFalse(context.getTac().isEmpty());
+    }
+
+    @Test
+    void testTACGenerationForControlFlowAndFunctionCalls() {
+        String source = """
+            void main() {
+                int x = 0;
+                if (x == 0) {
+                    x = 1;
+                } else {
+                    x = 2;
+                }
+                while (x < 10) {
+                    x = x + 1;
+                }
+                foo(x);
+            }
+
+            int foo(int a) {
+                return a + 1;
+            }
+        """;
+        ByteArrayInputStream input = new ByteArrayInputStream(source.getBytes(StandardCharsets.UTF_8));
+        context.setInputStream(input);
+
+        orchestrator.addPass(new FrontEndPass());
+        orchestrator.addPass(new SymbolTableBuilderPass());
+        orchestrator.addPass(new TypeCheckingPass());
+        orchestrator.addPass(new compiler.middle.TACConversionPass());
+
+        assertDoesNotThrow(() -> orchestrator.runPasses(context));
+        assertNotNull(context.getTac());
+        // A simple check to see if a reasonable number of instructions were generated.
+        assertTrue(context.getTac().size() > 10);
+    }
 }

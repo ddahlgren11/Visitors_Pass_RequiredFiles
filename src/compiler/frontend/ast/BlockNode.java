@@ -1,5 +1,5 @@
 package compiler.frontend.ast;
-
+import compiler.frontend.ASTNode;
 import java.util.List;
 
 public class BlockNode extends StatementNode {
@@ -9,5 +9,5 @@ public class BlockNode extends StatementNode {
 
     public List<ASTNode> getStatements() { return statements; }
 
-    @Override public <T> T accept(ASTVisitor<T> visitor) { return visitor.visit(this); }
+    @Override public void accept(ASTVisitor visitor) { visitor.visit(this); }
 }

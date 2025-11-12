@@ -13,5 +13,5 @@ public class BinaryExprNode extends ExpressionNode {
     public ExpressionNode getLeft() { return left; }
     public ExpressionNode getRight() { return right; }
 
-    @Override public <T> T accept(ASTVisitor<T> visitor) { return visitor.visit(this); }
+    @Override public void accept(ASTVisitor visitor) { visitor.visit(this); }
 }

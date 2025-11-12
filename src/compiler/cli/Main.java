@@ -39,6 +39,7 @@ public class Main {
             orchestrator.addPass(new FrontEndPass());
             orchestrator.addPass(new SymbolTableBuilderPass());
             orchestrator.addPass(new TypeCheckingPass());
+            orchestrator.addPass(new compiler.middle.TACConversionPass());
 
             // Run the compiler passes
             orchestrator.runPasses(context);
@@ -57,6 +58,12 @@ public class Main {
                 System.out.println("Compilation successful. " + diag.getSummary());
                 if (diag.hasWarnings()) {
                     for (String w : diag.getWarnings()) System.out.println(w);
+                }
+
+                // Print TAC
+                System.out.println("\n--- Three-Address Code ---");
+                for (var instruction : context.getTac()) {
+                    System.out.println(instruction);
                 }
             }
 
