@@ -1,16 +1,16 @@
 package compiler.frontend.ast;
 
 public class AssignmentNode extends StatementNode {
-    private final ExpressionNode target;
-    private final ExpressionNode value;
+    public final ExpressionNode target;
+    public final ExpressionNode expression;
 
-    public AssignmentNode(ExpressionNode target, ExpressionNode value) {
+    public AssignmentNode(ExpressionNode target, ExpressionNode expression) {
         this.target = target;
-        this.value = value;
+        this.expression = expression;
     }
 
     public ExpressionNode getTarget() { return target; }
-    public ExpressionNode getValue() { return value; }
+    public ExpressionNode getExpression() { return expression; }
 
-    @Override public <T> T accept(ASTVisitor<T> visitor) { return visitor.visit(this); }
+    @Override public void accept(ASTVisitor visitor) { visitor.visitAssignmentNode(this); }
 }

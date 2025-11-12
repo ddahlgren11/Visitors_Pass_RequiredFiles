@@ -1,9 +1,9 @@
 package compiler.frontend.ast;
 
 public class IfNode extends StatementNode {
-    private final ExpressionNode cond;
-    private final BlockNode thenBlock;
-    private final BlockNode elseBlock;
+    public final ExpressionNode cond;
+    public final BlockNode thenBlock;
+    public final BlockNode elseBlock;
 
     public IfNode(ExpressionNode cond, BlockNode thenBlock, BlockNode elseBlock) {
         this.cond = cond; this.thenBlock = thenBlock; this.elseBlock = elseBlock;
@@ -13,5 +13,5 @@ public class IfNode extends StatementNode {
     public BlockNode getThenBlock() { return thenBlock; }
     public BlockNode getElseBlock() { return elseBlock; }
 
-    @Override public <T> T accept(ASTVisitor<T> visitor) { return visitor.visit(this); }
+    @Override public void accept(ASTVisitor visitor) { visitor.visitIfNode(this); }
 }

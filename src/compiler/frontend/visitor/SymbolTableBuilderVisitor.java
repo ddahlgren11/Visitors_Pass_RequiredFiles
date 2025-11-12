@@ -6,77 +6,73 @@ import compiler.frontend.ast.*;
  * Example visitor that would build a symbol table. This is a stub showing
  * how a pass should implement behavior separate from the AST data classes.
  */
-public class SymbolTableBuilderVisitor implements ASTVisitor<Void> {
+public class SymbolTableBuilderVisitor implements ASTVisitor {
 
     @Override
-    public Void visit(BinaryExprNode node) {
-        node.getLeft().accept(this);
-        node.getRight().accept(this);
-        return null;
+    public void visitBinaryExprNode(BinaryExprNode node) {
+        node.left.accept(this);
+        node.right.accept(this);
     }
 
     @Override
-    public Void visit(AssignmentNode node) {
-        node.getTarget().accept(this);
-        node.getValue().accept(this);
-        return null;
+    public void visitAssignmentNode(AssignmentNode node) {
+        node.target.accept(this);
+        node.expression.accept(this);
     }
 
     @Override
-    public Void visit(VarDeclNode node) {
-        if (node.getInit() != null) node.getInit().accept(this);
+    public void visitVarDeclNode(VarDeclNode node) {
+        if (node.initializer != null) node.initializer.accept(this);
         // would declare symbol here
-        return null;
     }
 
     @Override
-    public Void visit(LiteralNode node) { return null; }
+    public void visitLiteralNode(LiteralNode node) { }
 
     @Override
-    public Void visit(IdentifierNode node) { return null; }
+    public void visitIdentifierNode(IdentifierNode node) { }
 
     @Override
-    public Void visit(BlockNode node) {
-        for (ASTNode s : node.getStatements()) {
+    public void visitBlockNode(BlockNode node) {
+        for (ASTNode s : node.statements) {
             s.accept(this);
         }
-        return null;
     }
 
     @Override
-    public Void visit(FunctionDeclNode node) {
+    public void visitFunctionDeclNode(FunctionDeclNode node) {
         // declare function, then visit body
-        if (node.getBody() != null) node.getBody().accept(this);
-        return null;
+        if (node.body != null) node.body.accept(this);
     }
 
     @Override
-    public Void visit(ReturnNode node) {
-        if (node.getExpr() != null) node.getExpr().accept(this);
-        return null;
+    public void visitReturnNode(ReturnNode node) {
+        if (node.expr != null) node.expr.accept(this);
     }
 
     @Override
-    public Void visit(IfNode node) {
-        node.getCond().accept(this);
-        if (node.getThenBlock() != null) node.getThenBlock().accept(this);
-        if (node.getElseBlock() != null) node.getElseBlock().accept(this);
-        return null;
+    public void visitIfNode(IfNode node) {
+        node.cond.accept(this);
+        if (node.thenBlock != null) node.thenBlock.accept(this);
+        if (node.elseBlock != null) node.elseBlock.accept(this);
     }
 
     @Override
-    public Void visit(ForNode node) {
-        if (node.getInit() != null) node.getInit().accept(this);
-        if (node.getCond() != null) node.getCond().accept(this);
-        if (node.getUpdate() != null) node.getUpdate().accept(this);
-        if (node.getBody() != null) node.getBody().accept(this);
-        return null;
+    public void visitForNode(ForNode node) {
+        if (node.init != null) node.init.accept(this);
+        if (node.cond != null) node.cond.accept(this);
+        if (node.update != null) node.update.accept(this);
+        if (node.body != null) node.body.accept(this);
     }
 
     @Override
-    public Void visit(WhileNode node) {
-        if (node.getCond() != null) node.getCond().accept(this);
-        if (node.getBody() != null) node.getBody().accept(this);
-        return null;
+    public void visitWhileNode(WhileNode node) {
+        if (node.cond != null) node.cond.accept(this);
+        if (node.body != null) node.body.accept(this);
+    }
+
+    @Override
+    public void visitBinaryOpNode(BinaryOpNode node) {
+        // TODO Auto-generated method stub
     }
 }
