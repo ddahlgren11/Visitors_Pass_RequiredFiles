@@ -3,7 +3,6 @@
 ./src/compiler/middle/ASTNodeBase.java
 ./src/compiler/middle/SymbolTableBuilder.java
 ./src/compiler/middle/Kind.java
-./src/compiler/middle/tac/TACVisitor.java
 ./src/compiler/middle/tac/OpCode.java
 ./src/compiler/middle/tac/TACConversionPass.java
 ./src/compiler/middle/tac/TACInstruction.java
