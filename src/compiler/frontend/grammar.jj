@@ -9,7 +9,7 @@ package compiler.frontend;
 PARSER_BEGIN(MyParser)
 
 import java.util.*;
-import ast.*;   // NEW: import your AST node classes
+import compiler.frontend.ast.*;
 
 public class MyParser {
     public static void main(String[] args) throws ParseException {
@@ -259,13 +259,36 @@ ASTNode WhileStmt() :
     }
 }
 
+// Productions for for-loop
+ASTNode VarDeclForLoop() :
+{
+    Token t; Token id; ASTNode expr = null;
+}
+{
+    (t=<INT> | t=<IDENTIFIER>) id=<IDENTIFIER> ( <ASSIGN> expr=Expression() )?
+    {
+        return new VarDeclNode(t.image, id.image, expr);
+    }
+}
+
+ASTNode AssignmentForLoop() :
+{
+    Token id; ASTNode expr;
+}
+{
+    id=<IDENTIFIER> <ASSIGN> expr=Expression()
+    {
+        return new AssignmentNode(new IdentifierNode(id.image), expr);
+    }
+}
+
 ASTNode ForStmt() :
 {
     ASTNode init=null, cond=null, update=null, body;
 }
 {
     <FOR> <LPAREN>
-        ( init=VarDecl() | init=Assignment() | <SEMI> ) 
+        ( init=VarDeclForLoop() | init=AssignmentForLoop() )? <SEMI>
         cond=Expression()? <SEMI>
         update=Expression()? <RPAREN>
         body=Statement()
