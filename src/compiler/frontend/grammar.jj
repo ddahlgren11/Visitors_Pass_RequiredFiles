@@ -3,10 +3,10 @@ options {
     PARSER_PACKAGE = "compiler.frontend";
 }
 
-package compiler.frontend;
-
 
 PARSER_BEGIN(MyParser)
+
+package compiler.frontend;
 
 import java.util.*;
 import ast.*;   // NEW: import your AST node classes
