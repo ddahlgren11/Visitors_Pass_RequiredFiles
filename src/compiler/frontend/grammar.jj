@@ -1,6 +1,5 @@
 options {
     STATIC = false;
-    PARSER_PACKAGE = "compiler.frontend";
 }
 
 
@@ -28,7 +27,7 @@ PARSER_END(MyParser)
 // ---------- Tokens ----------
 SKIP : { " " | "\t" | "\n" | "\r" }
 SKIP : { < "//" (~["\n"])* ("\n"|"\r"|"\r\n") > }
-SKIP : { < "/*" (~["*"] | "*" ~"/")* "*/" > }
+SKIP : { < "/*" ( ~["*"] | "*" ~["/"] )* "*/" >}
 
 TOKEN : { < IF: "if" > }
 TOKEN : { < ELSE: "else" > }
@@ -66,10 +65,13 @@ TOKEN : { < RBRACE: "}" > }
 TOKEN : { < SEMI: ";" > }
 TOKEN : { < COMMA: "," > }
 
-TOKEN : { < IDENTIFIER: (<LETTER>)(<LETTER>|<DIGIT>)* > }
-< #LETTER: ["a"-"z","A"-"Z","_"] >
-< #DIGIT: ["0"-"9"] >
-
+TOKEN : {
+    < IDENTIFIER: (<LETTER>)(<LETTER>|<DIGIT>)* >
+|
+    < #LETTER: ["a"-"z","A"-"Z","_"] >
+|
+    < #DIGIT: ["0"-"9"] >
+}
 // ---------- Program ----------
 ASTNode Program() :
 {
@@ -177,7 +179,8 @@ ASTNode Equality() :
     ASTNode left, right; Token op;
 }
 {
-    left=Relational() ( op=(<EQ>|<NEQ>) right=Relational()
+    left=Relational() 
+    ( (op=<EQ> | op=<NEQ>) right=Relational()
         { left = new BinaryOpNode(op.image, left, right); }
     )*
     { return left; }
@@ -188,7 +191,8 @@ ASTNode Relational() :
     ASTNode left, right; Token op;
 }
 {
-    left=Additive() ( op=(<LT>|<GT>) right=Additive()
+    left = Additive() 
+    ( (op=<LT> | op=<GT>) right=Additive()
         { left = new BinaryOpNode(op.image, left, right); }
     )*
     { return left; }
@@ -199,7 +203,8 @@ ASTNode Additive() :
     ASTNode left, right; Token op;
 }
 {
-    left=Term() ( op=(<PLUS>|<MINUS>) right=Term()
+    left = Term()
+    ( (op=<PLUS> | op=<MINUS>) right=Term()
         { left = new BinaryOpNode(op.image, left, right); }
     )*
     { return left; }
@@ -210,7 +215,8 @@ ASTNode Term() :
     ASTNode left, right; Token op;
 }
 {
-    left=Factor() ( op=(<MULT>|<DIV>) right=Factor()
+    left = Factor()
+    ( (op=<MULT> | op=<DIV>) right=Factor()
         { left = new BinaryOpNode(op.image, left, right); }
     )*
     { return left; }
@@ -288,9 +294,9 @@ ASTNode ForStmt() :
 }
 {
     <FOR> <LPAREN>
-        ( init=VarDeclForLoop() | init=AssignmentForLoop() )? <SEMI>
-        cond=Expression()? <SEMI>
-        update=Expression()? <RPAREN>
+        [ init=VarDeclForLoop() | init=AssignmentForLoop() ] <SEMI>
+        [ cond=Expression() ] <SEMI>
+        [ update=Expression() ] <RPAREN>
         body=Statement()
     {
         return new ForNode(init, cond, update, body);
@@ -322,13 +328,16 @@ ASTNode FunctionDecl() :
 
 List<VarDeclNode> ParamList() :
 {
-    List<VarDeclNode> params = new ArrayList<>(); Token t, id;
+    List<VarDeclNode> params = new ArrayList<>(); 
+    Token t, id;
 }
 {
-    t=(<INT>|<IDENTIFIER>) id=<IDENTIFIER>
+    ( t=<INT> | t=<IDENTIFIER> ) id=<IDENTIFIER>
     { params.add(new VarDeclNode(t.image, id.image, null)); }
-    ( <COMMA> t=(<INT>|<IDENTIFIER>) id=<IDENTIFIER>
+
+    ( <COMMA> ( t=<INT> | t=<IDENTIFIER> ) id=<IDENTIFIER>
       { params.add(new VarDeclNode(t.image, id.image, null)); }
     )*
+
     { return params; }
 }
