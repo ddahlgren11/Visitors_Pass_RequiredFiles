@@ -1,5 +1,7 @@
 package compiler.frontend.ast;
 
+import compiler.frontend.ASTTestTree;
+
 import java.util.List;
 
 public class BlockNode extends StatementNode {
@@ -10,4 +12,13 @@ public class BlockNode extends StatementNode {
     public List<ASTNode> getStatements() { return statements; }
 
     @Override public void accept(ASTVisitor visitor) { visitor.visitBlockNode(this); }
+
+    @Override
+    public ASTTestTree toASTTestTree() {
+        ASTTestTree root = new ASTTestTree("BLOCK");
+        for (ASTNode statement : statements) {
+            root.addChild(statement.toASTTestTree());
+        }
+        return root;
+    }
 }

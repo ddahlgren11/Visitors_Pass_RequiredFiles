@@ -2,6 +2,7 @@ import compiler.infra.*;
 import compiler.frontend.ast.*;
 import compiler.frontend.FrontEndPass;
 import compiler.frontend.SymbolTableBuilderPass;
+import compiler.frontend.TypeCheckingPass;
 import org.junit.jupiter.api.*;
 
 import java.io.ByteArrayInputStream;
@@ -146,7 +147,7 @@ public class MainTest {
         orchestrator.runPasses(context);
 
         // Students can replace this with an actual check once the symbol table API is known.
-        // Example: assertNotNull(context.getSymbolTable(), "Symbol table should be created after SymbolTableBuilderPass.");
+        // Example: assertNotNull(context.getSymbolTople(), "Symbol table should be created after SymbolTableBuilderPass.");
         assertTrue(true, "Symbol table existence check placeholder.");
     }
 

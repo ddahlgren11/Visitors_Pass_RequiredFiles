@@ -1,5 +1,7 @@
 package compiler.frontend.ast;
 
+import compiler.frontend.ASTTestTree;
+
 public class AssignmentNode extends StatementNode {
     public final ExpressionNode target;
     public final ExpressionNode expression;
@@ -13,4 +15,12 @@ public class AssignmentNode extends StatementNode {
     public ExpressionNode getExpression() { return expression; }
 
     @Override public void accept(ASTVisitor visitor) { visitor.visitAssignmentNode(this); }
+
+    @Override
+    public ASTTestTree toASTTestTree() {
+        ASTTestTree root = new ASTTestTree("ASSIGN");
+        root.addChild(target.toASTTestTree());
+        root.addChild(expression.toASTTestTree());
+        return root;
+    }
 }

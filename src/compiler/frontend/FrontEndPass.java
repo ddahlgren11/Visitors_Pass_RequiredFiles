@@ -1,5 +1,7 @@
 package compiler.frontend;
 
+import compiler.frontend.ast.ASTNode;
+import compiler.frontend.ast.BlockNode;
 import compiler.infra.CompilerContext;
 import compiler.infra.CompilerPass;
 import compiler.infra.Diagnostics;
@@ -37,7 +39,7 @@ public class FrontEndPass implements CompilerPass {
             MyParser parser = new MyParser(input);
             // The real parser should have a root method (e.g., Program()). If not available,
             // store a placeholder empty block AST for now so the pipeline can continue.
-            ASTNodeBase ast;
+            ASTNode ast;
             try {
                 // attempt to call a common root method if it exists
                 ast = parser.Assignment();
@@ -62,4 +64,3 @@ public class FrontEndPass implements CompilerPass {
         System.out.println("=== Finished FrontEndPass ===");
     }
 }
-

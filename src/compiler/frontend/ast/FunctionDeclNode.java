@@ -1,5 +1,7 @@
 package compiler.frontend.ast;
 
+import compiler.frontend.ASTTestTree;
+
 import java.util.List;
 
 public class FunctionDeclNode extends ASTNode {
@@ -18,4 +20,16 @@ public class FunctionDeclNode extends ASTNode {
     public BlockNode getBody() { return body; }
 
     @Override public void accept(ASTVisitor visitor) { visitor.visitFunctionDeclNode(this); }
+
+    @Override
+    public ASTTestTree toASTTestTree() {
+        ASTTestTree root = new ASTTestTree("FUNC " + returnType + " " + name);
+        ASTTestTree paramsRoot = new ASTTestTree("PARAMS");
+        for (VarDeclNode param : params) {
+            paramsRoot.addChild(param.toASTTestTree());
+        }
+        root.addChild(paramsRoot);
+        root.addChild(body.toASTTestTree());
+        return root;
+    }
 }

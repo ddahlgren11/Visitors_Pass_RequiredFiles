@@ -2,6 +2,7 @@ import compiler.infra.*;
 import compiler.frontend.ast.*;
 import compiler.frontend.FrontEndPass;
 import compiler.frontend.SymbolTableBuilderPass;
+import compiler.frontend.TypeCheckingPass;
 import org.junit.jupiter.api.*;
 
 import java.io.*;

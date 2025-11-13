@@ -1,5 +1,7 @@
 package compiler.frontend.ast;
 
+import compiler.frontend.ASTTestTree;
+
 public class VarDeclNode extends StatementNode {
     public final String type;
     public final String name;
@@ -16,4 +18,13 @@ public class VarDeclNode extends StatementNode {
     public ExpressionNode getInitializer() { return initializer; }
 
     @Override public void accept(ASTVisitor visitor) { visitor.visitVarDeclNode(this); }
+
+    @Override
+    public ASTTestTree toASTTestTree() {
+        ASTTestTree root = new ASTTestTree("VAR_DECL " + type + " " + name);
+        if (initializer != null) {
+            root.addChild(initializer.toASTTestTree());
+        }
+        return root;
+    }
 }
