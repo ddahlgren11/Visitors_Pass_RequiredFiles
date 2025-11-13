@@ -1,7 +1,8 @@
 package compiler.infra;
 
+import compiler.frontend.ast.ASTNode;
+
 import java.io.InputStream;
-import compiler.frontend.ASTNodeBase;
 import compiler.middle.SymbolTable;
 import compiler.middle.SymbolTableImpl;
 
@@ -13,7 +14,7 @@ public class CompilerContext {
     private InputStream inputStream;
     private final Diagnostics diagnostics = new Diagnostics();
     // Hold a reference to the frontend AST (may be null if parsing hasn't run)
-    private ASTNodeBase ast;
+    private ASTNode ast;
     // optional symbol table built by semantic passes
     private SymbolTable symbolTable;
 
@@ -35,14 +36,14 @@ public class CompilerContext {
     /**
      * Store the AST produced by the front-end.
      */
-    public void setAst(ASTNodeBase ast) {
+    public void setAst(ASTNode ast) {
         this.ast = ast;
     }
 
     /**
      * Retrieve the AST (may be null if not yet produced).
      */
-    public ASTNodeBase getAst() {
+    public ASTNode getAst() {
         return ast;
     }
 

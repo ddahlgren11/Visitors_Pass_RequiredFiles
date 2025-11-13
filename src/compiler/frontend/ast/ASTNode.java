@@ -1,5 +1,6 @@
 package compiler.frontend.ast;
 
+import compiler.frontend.ASTTestTree;
 import compiler.middle.tac.TACConversionPass;
 
 /**
@@ -9,4 +10,6 @@ import compiler.middle.tac.TACConversionPass;
 public abstract class ASTNode {
     /** Accept a visitor and return a visitor-defined result. */
     public abstract void accept(ASTVisitor visitor);
+
+    public abstract ASTTestTree toASTTestTree();
 }

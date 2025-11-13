@@ -1,5 +1,7 @@
 package compiler.frontend.ast;
 
+import compiler.frontend.ASTTestTree;
+
 public class BinaryOpNode extends ExpressionNode {
     public final String op;
     public final ExpressionNode left, right;
@@ -13,5 +15,13 @@ public class BinaryOpNode extends ExpressionNode {
     @Override
     public void accept(ASTVisitor visitor) {
         visitor.visitBinaryOpNode(this);
+    }
+
+    @Override
+    public ASTTestTree toASTTestTree() {
+        ASTTestTree root = new ASTTestTree(op);
+        root.addChild(left.toASTTestTree());
+        root.addChild(right.toASTTestTree());
+        return root;
     }
 }

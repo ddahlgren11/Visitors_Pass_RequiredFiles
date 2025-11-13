@@ -3,7 +3,7 @@ package compiler.frontend;
 import java.io.*;
 import java.util.*;
 
-import compiler.frontend.*;
+import compiler.frontend.ast.*;
 
 public class MyParser {
     private final List<String> tokens;
@@ -99,7 +99,7 @@ public class MyParser {
     }
 
     // Return AST node for an assignment
-    public ASTNodeBase Assignment() throws ParseException {
+    public ASTNode Assignment() throws ParseException {
         List<String> t = tokens;
         int semi = t.indexOf(";");
         if (semi == -1) throw new ParseException("missing semicolon");
@@ -109,19 +109,18 @@ public class MyParser {
             // top-level assignment of form: int id = expr; -> produce (= (decl int id) expr)
             String type = stmt.get(0);
             String name = stmt.get(1);
-            ASTNodeBase init = tokenToExpr(stmt.subList(3, stmt.size() - 1));
-            ASTNodeBase declNoInit = new VarDeclNode(type, name, null);
-            return new AssignmentNode(declNoInit, init);
+            ExpressionNode init = (ExpressionNode) tokenToExpr(stmt.subList(3, stmt.size() - 1));
+            return new VarDeclNode(type, name, init);
         }
         if (stmt.size() >= 3 && isIdentifier(stmt.get(0)) && "=".equals(stmt.get(1))) {
-            ASTNodeBase var = new IdentifierNode(stmt.get(0));
-            ASTNodeBase val = tokenToExpr(stmt.subList(2, stmt.size() - 1));
+            ExpressionNode var = new IdentifierNode(stmt.get(0));
+            ExpressionNode val = (ExpressionNode) tokenToExpr(stmt.subList(2, stmt.size() - 1));
             return new AssignmentNode(var, val);
         }
         throw new ParseException("invalid assignment");
     }
 
-    public ASTNodeBase Declaration() throws ParseException {
+    public ASTNode Declaration() throws ParseException {
         List<String> t = tokens;
         int semi = t.indexOf(";");
         if (semi == -1) throw new ParseException("missing semicolon");
@@ -133,12 +132,12 @@ public class MyParser {
         throw new ParseException("invalid declaration");
     }
 
-    public ASTNodeBase PrintStatement() throws ParseException {
+    public ASTNode PrintStatement() throws ParseException {
         // Not used by tests; keep for completeness
         throw new ParseException("not implemented");
     }
 
-    public ASTNodeBase IfStatement() throws ParseException {
+    public ASTNode IfStatement() throws ParseException {
         List<String> stmt = conditionalTokens("if");
         // tokens: if ( ... ) { ... }
         // find rparen and lbrace
@@ -146,17 +145,17 @@ public class MyParser {
         int lbrace = stmt.indexOf("{");
         List<String> condTokens = stmt.subList(2, rparen);
         List<String> bodyTokens = stmt.subList(lbrace + 1, stmt.size() - 1);
-        ASTNodeBase cond = tokenToExpr(condTokens);
-        ASTNodeBase body = blockTokensToNode(bodyTokens);
+        ExpressionNode cond = (ExpressionNode) tokenToExpr(condTokens);
+        ASTNode body = blockTokensToNode(bodyTokens);
         return new IfNode(cond, body, null);
     }
 
-    public ASTNodeBase WhileStatement() throws ParseException {
+    public ASTNode WhileStatement() throws ParseException {
         List<String> stmt = conditionalTokens("while");
         int rparen = stmt.indexOf(")");
         int lbrace = stmt.indexOf("{");
-        ASTNodeBase cond = tokenToExpr(stmt.subList(2, rparen));
-        ASTNodeBase body = blockTokensToNode(stmt.subList(lbrace + 1, stmt.size() - 1));
+        ExpressionNode cond = (ExpressionNode) tokenToExpr(stmt.subList(2, rparen));
+        ASTNode body = blockTokensToNode(stmt.subList(lbrace + 1, stmt.size() - 1));
         return new WhileNode(cond, body);
     }
 
@@ -177,7 +176,7 @@ public class MyParser {
         return new ArrayList<>(t.subList(0, j + 1));
     }
 
-    public ASTNodeBase ForStatement() throws ParseException {
+    public ASTNode ForStatement() throws ParseException {
         List<String> t = tokens;
         if (t.size() < 1 || !"for".equals(t.get(0))) throw new ParseException("missing for");
         if (t.size() < 4 || !"(".equals(t.get(1))) throw new ParseException("missing paren");
@@ -194,11 +193,13 @@ public class MyParser {
         int lparen = 1;
         int firstSemi = findIndex(stmt, ";", lparen);
         int secondSemi = firstSemi == -1 ? -1 : findIndex(stmt, ";", firstSemi + 1);
-        ASTNodeBase init = null, cond = null, update = null;
+        ASTNode init = null;
+        ExpressionNode cond = null;
+        ASTNode update = null;
         int rparenIndex = findIndex(stmt, ")", 0);
         int lbraceIndex = findIndex(stmt, "{", 0);
         if (firstSemi > lparen) init = simpleStmtToNode(stmt.subList(lparen + 1, firstSemi + 1));
-        if (secondSemi > firstSemi) cond = tokenToExpr(stmt.subList(firstSemi + 1, secondSemi));
+        if (secondSemi > firstSemi) cond = (ExpressionNode) tokenToExpr(stmt.subList(firstSemi + 1, secondSemi));
         if (rparenIndex > secondSemi) {
             List<String> updTokens = stmt.subList(secondSemi + 1, rparenIndex);
             // update part may not end with semicolon inside for(...) so allow no trailing ;
@@ -207,11 +208,11 @@ public class MyParser {
                 update = simpleStmtToNode(new ArrayList<>(updTokens));
             }
         }
-        ASTNodeBase body = blockTokensToNode(stmt.subList(lbraceIndex + 1, stmt.size() - 1));
+        ASTNode body = blockTokensToNode(stmt.subList(lbraceIndex + 1, stmt.size() - 1));
         return new ForNode(init, cond, update, body);
     }
 
-    public ASTNodeBase FunctionDeclaration() throws ParseException {
+    public ASTNode FunctionDeclaration() throws ParseException {
         List<String> t = tokens;
         if (t.size() < 6) throw new ParseException("invalid function");
         if (!"int".equals(t.get(0)) && !"void".equals(t.get(0))) throw new ParseException("invalid return type");
@@ -240,12 +241,12 @@ public class MyParser {
             }
             i++;
         }
-        ASTNodeBase body = blockTokensToNode(t.subList(rparen + 2, j));
+        BlockNode body = (BlockNode) blockTokensToNode(t.subList(rparen + 2, j));
         return new FunctionDeclNode(returnType, name, params, body);
     }
 
     // Helpers to convert token lists into AST nodes (very small expressions supported)
-    private ASTNodeBase tokenToExpr(List<String> toks) throws ParseException {
+    private ASTNode tokenToExpr(List<String> toks) throws ParseException {
         if (toks == null || toks.isEmpty()) throw new ParseException("empty expression");
         if (toks.size() == 1) {
             String tk = toks.get(0);
@@ -254,17 +255,17 @@ public class MyParser {
         }
         // binary op of form a op b
         if (toks.size() == 3) {
-            ASTNodeBase left = tokenToExpr(toks.subList(0,1));
+            ExpressionNode left = (ExpressionNode) tokenToExpr(toks.subList(0,1));
             String op = toks.get(1);
-            ASTNodeBase right = tokenToExpr(toks.subList(2,3));
+            ExpressionNode right = (ExpressionNode) tokenToExpr(toks.subList(2,3));
             return new BinaryOpNode(op, left, right);
         }
         throw new ParseException("unsupported expression: " + toks);
     }
 
-    private ASTNodeBase blockTokensToNode(List<String> toks) throws ParseException {
+    private ASTNode blockTokensToNode(List<String> toks) throws ParseException {
         // toks contains tokens inside the braces; assume a single statement for tests
-        List<ASTNodeBase> stmts = new ArrayList<>();
+        List<ASTNode> stmts = new ArrayList<>();
         if (toks == null || toks.isEmpty()) return new BlockNode(stmts);
         // find semicolon separated statements
         int i = 0;
@@ -285,7 +286,7 @@ public class MyParser {
         return -1;
     }
 
-    private ASTNodeBase simpleStmtToNode(List<String> stmt) throws ParseException {
+    private ASTNode simpleStmtToNode(List<String> stmt) throws ParseException {
         if (stmt == null || stmt.isEmpty()) throw new ParseException("empty stmt");
         // normalize: if last token is ";" remove it for easier matching
         List<String> toks = stmt;
@@ -294,11 +295,8 @@ public class MyParser {
             if (toks.size() >= 3 && "=".equals(toks.get(2))) {
                 String type = toks.get(0);
                 String name = toks.get(1);
-                ASTNodeBase initExpr = tokenToExpr(toks.subList(3, toks.size()));
-                // represent top-level initialized declaration as VarDeclNode with an init that is an AssignmentNode whose left is a decl node
-                VarDeclNode declNoInit = new VarDeclNode(type, name, null);
-                AssignmentNode assign = new AssignmentNode(declNoInit, initExpr);
-                return new VarDeclNode(type, name, assign);
+                ExpressionNode initExpr = (ExpressionNode) tokenToExpr(toks.subList(3, toks.size()));
+                return new VarDeclNode(type, name, initExpr);
             } else if (toks.size() == 2) {
                 return new VarDeclNode(toks.get(0), toks.get(1), null);
             }
@@ -306,20 +304,20 @@ public class MyParser {
         // return statement
         if ("return".equals(toks.get(0))) {
             if (toks.size() == 2) {
-                return new ReturnNode(tokenToExpr(toks.subList(1, 2)));
+                return new ReturnNode((ExpressionNode) tokenToExpr(toks.subList(1, 2)));
             } else if (toks.size() == 3) {
-                return new ReturnNode(tokenToExpr(toks.subList(1, 3)));
+                return new ReturnNode((ExpressionNode) tokenToExpr(toks.subList(1, 3)));
             } else if (toks.size() > 1) {
                 // attempt to parse binary return expr like a + b
-                return new ReturnNode(tokenToExpr(toks.subList(1, toks.size())));
+                return new ReturnNode((ExpressionNode) tokenToExpr(toks.subList(1, toks.size())));
             } else {
                 return new ReturnNode(null);
             }
         }
         // assignment like 'y = y * 2;'
         if (toks.size() >= 3 && isIdentifier(toks.get(0)) && "=".equals(toks.get(1))) {
-            ASTNodeBase var = new IdentifierNode(toks.get(0));
-            ASTNodeBase val = tokenToExpr(toks.subList(2, toks.size()));
+            ExpressionNode var = new IdentifierNode(toks.get(0));
+            ExpressionNode val = (ExpressionNode) tokenToExpr(toks.subList(2, toks.size()));
             return new AssignmentNode(var, val);
         }
         throw new ParseException("unsupported simple stmt: " + stmt);
