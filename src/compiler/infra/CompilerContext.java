@@ -1,10 +1,6 @@
 package compiler.infra;
 
-import compiler.frontend.ast.ASTNode;
-
 import java.io.InputStream;
-import compiler.middle.SymbolTable;
-import compiler.middle.SymbolTableImpl;
 
 /**
  * Shared compiler state that passes can read or modify.
@@ -14,9 +10,9 @@ public class CompilerContext {
     private InputStream inputStream;
     private final Diagnostics diagnostics = new Diagnostics();
     // Hold a reference to the frontend AST (may be null if parsing hasn't run)
-    private ASTNode ast;
+    private Object ast;
     // optional symbol table built by semantic passes
-    private SymbolTable symbolTable;
+    private Object symbolTable;
 
     public void setInputStream(InputStream inputStream) {
         this.inputStream = inputStream;
@@ -36,32 +32,36 @@ public class CompilerContext {
     /**
      * Store the AST produced by the front-end.
      */
-    public void setAst(ASTNode ast) {
+    public void setAst(Object ast) {
         this.ast = ast;
     }
 
     /**
      * Retrieve the AST (may be null if not yet produced).
      */
-    public ASTNode getAst() {
+    public Object getAst() {
         return ast;
     }
 
     /**
      * Store the symbol table produced by the semantic analysis pass.
      */
-    public void setSymbolTable(SymbolTable table) {
+    public void setSymbolTable(Object table) {
         this.symbolTable = table;
     }
 
     /**
      * Retrieve the symbol table (may be null if not yet built).
      */
-    public SymbolTable getSymbolTable() {
+    public Object getSymbolTable() {
         // lazily create a default one to avoid null checks elsewhere
+        /*
         if (symbolTable == null) {
             symbolTable = new SymbolTableImpl();
         }
+        */
+        // Note: Can't instantiate SymbolTableImpl here without dependency.
+        // Callers must handle null or initialization.
         return symbolTable;
     }
 

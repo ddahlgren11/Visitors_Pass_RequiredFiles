@@ -15,8 +15,10 @@ public class TypeCheckingPass implements CompilerPass {
     @Override
     public void execute(CompilerContext context) throws Exception {
         Diagnostics diag = context.getDiagnostics();
-        SymbolTable table = context.getSymbolTable();
-        if (table == null || context.getAst() == null) return;
+        Object tableObj = context.getSymbolTable();
+        if (tableObj == null || context.getAst() == null) return;
+
+        SymbolTable table = (SymbolTable) tableObj;
 
         Object ast = context.getAst();
         if (ast instanceof ASTNode) {

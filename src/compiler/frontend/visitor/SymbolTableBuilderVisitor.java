@@ -116,4 +116,9 @@ public class SymbolTableBuilderVisitor implements ASTVisitor {
         node.getCond().accept(this);
         node.getBody().accept(this);
     }
+
+    @Override
+    public void visitUnaryOpNode(UnaryOpNode node) {
+        node.expr.accept(this);
+    }
 }

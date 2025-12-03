@@ -124,4 +124,10 @@ public class TACConversionPass implements ASTVisitor {
         // TODO Auto-generated method stub
         lastResult = null;
     }
+
+    @Override
+    public void visitUnaryOpNode(compiler.frontend.ast.UnaryOpNode node) {
+        // TODO Auto-generated method stub
+        lastResult = null;
+    }
 }
