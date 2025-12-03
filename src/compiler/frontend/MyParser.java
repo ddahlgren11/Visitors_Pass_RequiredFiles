@@ -20,9 +20,9 @@ public class MyParser implements MyParserConstants {
         }
     }
 
-    public MyParser(java.io.Reader reader) {
-        this(new SimpleCharStream(reader, 1, 1));
-    }
+//  public MyParser(java.io.Reader reader) {
+//    this(new SimpleCharStream(reader, 1, 1));
+//  }
 
 // ---------- Program ----------
   final public ASTNode Program() throws ParseException {List<ASTNode> stmts = new ArrayList<>();
@@ -50,11 +50,14 @@ stmts.add(s);
       n = VarDecl();
 {if ("" != null) return n;}
       break;
-      }{
+      }
+      /*
+      {
       n = Assignment();
 {if ("" != null) return n;}
       break;
       }
+      */
     case IF:{
       n = IfStmt();
 {if ("" != null) return n;}
@@ -94,7 +97,7 @@ stmts.add(s);
         switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
         case SEMI:{
           jj_consume_token(SEMI);
-{if ("" != null) return new EmptyNode();}
+{if ("" != null) return new BlockNode(java.util.Collections.emptyList());}
           break;
           }
         default:
@@ -126,7 +129,7 @@ stmts.add(s);
       ;
     }
     jj_consume_token(SEMI);
-{if ("" != null) return new ReturnNode(expr);}
+{if ("" != null) return new ReturnNode((ExpressionNode)expr);}
     throw new Error("Missing return statement in function");
 }
 
@@ -158,7 +161,7 @@ stmts.add(s);
       ;
     }
     jj_consume_token(SEMI);
-{if ("" != null) return new VarDeclNode(t.image, id.image, expr);}
+{if ("" != null) return new VarDeclNode(t.image, id.image, (ExpressionNode)expr);}
     throw new Error("Missing return statement in function");
 }
 
@@ -168,7 +171,7 @@ stmts.add(s);
     jj_consume_token(ASSIGN);
     expr = Expression();
     jj_consume_token(SEMI);
-{if ("" != null) return new AssignmentNode(new IdentifierNode(id.image), expr);}
+{if ("" != null) return new AssignmentNode(new IdentifierNode(id.image), (ExpressionNode)expr);}
     throw new Error("Missing return statement in function");
 }
 
@@ -208,7 +211,7 @@ stmts.add(s);
       }
       op = jj_consume_token(OR);
       right = LogicalAnd();
-left = new BinaryOpNode(op.image, left, right);
+left = new BinaryOpNode(op.image, (ExpressionNode)left, (ExpressionNode)right);
     }
 {if ("" != null) return left;}
     throw new Error("Missing return statement in function");
@@ -229,7 +232,7 @@ left = new BinaryOpNode(op.image, left, right);
       }
       op = jj_consume_token(AND);
       right = Equality();
-left = new BinaryOpNode(op.image, left, right);
+left = new BinaryOpNode(op.image, (ExpressionNode)left, (ExpressionNode)right);
     }
 {if ("" != null) return left;}
     throw new Error("Missing return statement in function");
@@ -264,7 +267,7 @@ left = new BinaryOpNode(op.image, left, right);
         throw new ParseException();
       }
       right = Relational();
-left = new BinaryOpNode(op.image, left, right);
+left = new BinaryOpNode(op.image, (ExpressionNode)left, (ExpressionNode)right);
     }
 {if ("" != null) return left;}
     throw new Error("Missing return statement in function");
@@ -299,7 +302,7 @@ left = new BinaryOpNode(op.image, left, right);
         throw new ParseException();
       }
       right = Additive();
-left = new BinaryOpNode(op.image, left, right);
+left = new BinaryOpNode(op.image, (ExpressionNode)left, (ExpressionNode)right);
     }
 {if ("" != null) return left;}
     throw new Error("Missing return statement in function");
@@ -334,7 +337,7 @@ left = new BinaryOpNode(op.image, left, right);
         throw new ParseException();
       }
       right = Term();
-left = new BinaryOpNode(op.image, left, right);
+left = new BinaryOpNode(op.image, (ExpressionNode)left, (ExpressionNode)right);
     }
 {if ("" != null) return left;}
     throw new Error("Missing return statement in function");
@@ -369,7 +372,7 @@ left = new BinaryOpNode(op.image, left, right);
         throw new ParseException();
       }
       right = Factor();
-left = new BinaryOpNode(op.image, left, right);
+left = new BinaryOpNode(op.image, (ExpressionNode)left, (ExpressionNode)right);
     }
 {if ("" != null) return left;}
     throw new Error("Missing return statement in function");
@@ -425,7 +428,7 @@ left = new BinaryOpNode(op.image, left, right);
       jj_consume_token(LPAREN);
       e = Expression();
       jj_consume_token(RPAREN);
-{if ("" != null) return e;}
+{if ("" != null) return (ExpressionNode)e;}
       break;
       }
     default:
@@ -453,7 +456,7 @@ left = new BinaryOpNode(op.image, left, right);
       jj_la1[17] = jj_gen;
       ;
     }
-{if ("" != null) return new IfNode(cond, thenBlock, elseBlock);}
+{if ("" != null) return new IfNode((ExpressionNode)cond, (StatementNode)thenBlock, (StatementNode)elseBlock);}
     throw new Error("Missing return statement in function");
 }
 
@@ -463,7 +466,7 @@ left = new BinaryOpNode(op.image, left, right);
     cond = Expression();
     jj_consume_token(RPAREN);
     body = Statement();
-{if ("" != null) return new WhileNode(cond, body);}
+{if ("" != null) return new WhileNode((ExpressionNode)cond, (StatementNode)body);}
     throw new Error("Missing return statement in function");
 }
 
@@ -494,7 +497,7 @@ left = new BinaryOpNode(op.image, left, right);
       jj_la1[19] = jj_gen;
       ;
     }
-{if ("" != null) return new VarDeclNode(t.image, id.image, expr);}
+{if ("" != null) return new VarDeclNode(t.image, id.image, (ExpressionNode)expr);}
     throw new Error("Missing return statement in function");
 }
 
@@ -502,7 +505,7 @@ left = new BinaryOpNode(op.image, left, right);
     id = jj_consume_token(IDENTIFIER);
     jj_consume_token(ASSIGN);
     expr = Expression();
-{if ("" != null) return new AssignmentNode(new IdentifierNode(id.image), expr);}
+{if ("" != null) return new AssignmentNode(new IdentifierNode(id.image), (ExpressionNode)expr);}
     throw new Error("Missing return statement in function");
 }
 
@@ -517,10 +520,13 @@ left = new BinaryOpNode(op.image, left, right);
       case IDENTIFIER:{
         init = VarDeclForLoop();
         break;
-        }{
+        }
+      /*
+        {
         init = AssignmentForLoop();
         break;
         }
+      */
       default:
         jj_la1[20] = jj_gen;
         jj_consume_token(-1);
@@ -566,7 +572,7 @@ left = new BinaryOpNode(op.image, left, right);
     }
     jj_consume_token(RPAREN);
     body = Statement();
-{if ("" != null) return new ForNode(init, cond, update, body);}
+{if ("" != null) return new ForNode((StatementNode)init, (ExpressionNode)cond, (ExpressionNode)update, (StatementNode)body);}
     throw new Error("Missing return statement in function");
 }
 
@@ -620,7 +626,7 @@ stmts.add(s);
     }
     jj_consume_token(RPAREN);
     body = Block();
-{if ("" != null) return new FunctionDeclNode(t.image, id.image, params, body);}
+{if ("" != null) return new FunctionDeclNode(t.image, id.image, params, (BlockNode)body);}
     throw new Error("Missing return statement in function");
 }
 
