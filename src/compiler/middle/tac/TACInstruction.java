@@ -15,10 +15,21 @@ public class TACInstruction {
 
     @Override
     public String toString() {
-        if (arg2 != null) {
-            return target + " = " + arg1 + " " + op + " " + arg2;
-        } else {
-            return target + " = " + arg1;
+        switch (op) {
+            case LOAD_CONST:
+                return target + " = " + arg1;
+            case STORE_VAR:
+                return target + " = " + arg1;
+            case ADD:
+                return target + " = " + arg1 + " + " + arg2;
+            case SUB:
+                return target + " = " + arg1 + " - " + arg2;
+            case MUL:
+                return target + " = " + arg1 + " * " + arg2;
+            case DIV:
+                return target + " = " + arg1 + " / " + arg2;
+            default:
+                return op + " " + target + ", " + arg1 + ", " + arg2;
         }
     }
 }

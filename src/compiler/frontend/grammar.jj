@@ -11,10 +11,18 @@ import java.util.*;
 import compiler.frontend.ast.*;
 
 public class MyParser {
-    public static void main(String[] args) throws ParseException {
-        MyParser parser = new MyParser(System.in);
-        ASTNode prog = parser.Program();
-        System.out.println(prog.toASTTestTree().toString());
+    public static void main(String[] args) {
+        try {
+            MyParser parser = new MyParser(System.in);
+            ASTNode prog = parser.Program();
+            System.out.println(prog.toASTTestTree().toString());
+        } catch (TokenMgrError e) {
+            // Lexer-level error: illegal character or token
+            System.err.println("LEXER ERROR: " + e.getMessage());
+        } catch (ParseException e) {
+            // Parser-level error: bad syntax
+            System.err.println("PARSE ERROR: " + e.getMessage());
+        }
     }
 
     public MyParser(java.io.Reader reader) {
@@ -40,6 +48,11 @@ TOKEN : { < TRUE: "true" > }
 TOKEN : { < FALSE: "false" > }
 TOKEN : { < NULL: "null" > }
 TOKEN : { < NEW: "new" > }     
+
+TOKEN : { < CLASS: "class" > }
+TOKEN : { < PUBLIC: "public" > }
+TOKEN : { < STATIC: "static" > }
+TOKEN : { < THIS: "this" > }
 
 TOKEN : { < INT_LITERAL: (["0"-"9"])+ > }
 TOKEN : { < STRING_LITERAL: "\"" (~["\"","\\"])* "\"" > }
