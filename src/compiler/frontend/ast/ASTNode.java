@@ -1,7 +1,6 @@
 package compiler.frontend.ast;
 
 import compiler.frontend.ASTTestTree;
-import compiler.middle.tac.TACConversionPass;
 
 /**
  * Base node for the frontend AST used by visitor-based passes.
