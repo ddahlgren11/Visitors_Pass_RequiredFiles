@@ -98,4 +98,9 @@ public class TypeCheckingVisitor implements ASTVisitor {
         node.getCond().accept(this);
         node.getBody().accept(this);
     }
+
+    @Override
+    public void visitUnaryOpNode(UnaryOpNode node) {
+        node.expr.accept(this);
+    }
 }
