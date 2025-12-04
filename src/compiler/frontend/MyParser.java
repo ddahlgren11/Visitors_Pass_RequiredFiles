@@ -20,10 +20,6 @@ public class MyParser implements MyParserConstants {
         }
     }
 
-    public MyParser(java.io.Reader reader) {
-        this(new SimpleCharStream(reader, 1, 1));
-    }
-
 // ---------- Program ----------
   final public ASTNode Program() throws ParseException {List<ASTNode> stmts = new ArrayList<>();
     ASTNode s;
@@ -38,8 +34,7 @@ public class MyParser implements MyParserConstants {
 stmts.add(s);
     }
     jj_consume_token(0);
-{if ("" != null) return new BlockNode(stmts);}
-    throw new Error("Missing return statement in function");
+return new BlockNode(stmts);
 }
 
 // ---------- Statements ----------
@@ -48,54 +43,42 @@ stmts.add(s);
     case INT:
     case IDENTIFIER:{
       n = VarDecl();
-{if ("" != null) return n;}
-      break;
-      }{
-      n = Assignment();
-{if ("" != null) return n;}
-      break;
+return n;
       }
     case IF:{
       n = IfStmt();
-{if ("" != null) return n;}
-      break;
+return n;
       }
     case WHILE:{
       n = WhileStmt();
-{if ("" != null) return n;}
-      break;
+return n;
       }
     case FOR:{
       n = ForStmt();
-{if ("" != null) return n;}
-      break;
+return n;
       }
     case LBRACE:{
       n = Block();
-{if ("" != null) return n;}
-      break;
+return n;
       }
     case VOID:{
       n = FunctionDecl();
-{if ("" != null) return n;}
-      break;
+return n;
       }
     case RETURN:{
       n = ReturnStmt();
-{if ("" != null) return n;}
-      break;
+return n;
       }
     default:
       jj_la1[0] = jj_gen;
       if (jj_2_2(1)) {
         n = ExprStmt();
-{if ("" != null) return n;}
+return n;
       } else {
         switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
         case SEMI:{
           jj_consume_token(SEMI);
-{if ("" != null) return new EmptyNode();}
-          break;
+return new BlockNode(new ArrayList<>());
           }
         default:
           jj_la1[1] = jj_gen;
@@ -104,7 +87,6 @@ stmts.add(s);
         }
       }
     }
-    throw new Error("Missing return statement in function");
 }
 
 // Return
@@ -126,8 +108,7 @@ stmts.add(s);
       ;
     }
     jj_consume_token(SEMI);
-{if ("" != null) return new ReturnNode(expr);}
-    throw new Error("Missing return statement in function");
+return new ReturnNode((ExpressionNode)expr);
 }
 
 // Declaration
@@ -158,8 +139,7 @@ stmts.add(s);
       ;
     }
     jj_consume_token(SEMI);
-{if ("" != null) return new VarDeclNode(t.image, id.image, expr);}
-    throw new Error("Missing return statement in function");
+return new VarDeclNode(t.image, id.image, (ExpressionNode)expr);
 }
 
 // Assignment
@@ -168,8 +148,7 @@ stmts.add(s);
     jj_consume_token(ASSIGN);
     expr = Expression();
     jj_consume_token(SEMI);
-{if ("" != null) return new AssignmentNode(new IdentifierNode(id.image), expr);}
-    throw new Error("Missing return statement in function");
+return new AssignmentNode(new IdentifierNode(id.image), (ExpressionNode)expr);
 }
 
 // Expr stmt
@@ -182,15 +161,13 @@ stmts.add(s);
     }
     e = Expression();
     jj_consume_token(SEMI);
-{if ("" != null) return e;}
-    throw new Error("Missing return statement in function");
+return e;
 }
 
 // ---------- Expressions ----------
   final public ASTNode Expression() throws ParseException {ASTNode n;
     n = LogicalOr();
-{if ("" != null) return n;}
-    throw new Error("Missing return statement in function");
+return n;
 }
 
   final public ASTNode LogicalOr() throws ParseException {ASTNode left, right; Token op;
@@ -208,10 +185,9 @@ stmts.add(s);
       }
       op = jj_consume_token(OR);
       right = LogicalAnd();
-left = new BinaryOpNode(op.image, left, right);
+left = new BinaryOpNode(op.image, (ExpressionNode)left, (ExpressionNode)right);
     }
-{if ("" != null) return left;}
-    throw new Error("Missing return statement in function");
+return left;
 }
 
   final public ASTNode LogicalAnd() throws ParseException {ASTNode left, right; Token op;
@@ -229,10 +205,9 @@ left = new BinaryOpNode(op.image, left, right);
       }
       op = jj_consume_token(AND);
       right = Equality();
-left = new BinaryOpNode(op.image, left, right);
+left = new BinaryOpNode(op.image, (ExpressionNode)left, (ExpressionNode)right);
     }
-{if ("" != null) return left;}
-    throw new Error("Missing return statement in function");
+return left;
 }
 
   final public ASTNode Equality() throws ParseException {ASTNode left, right; Token op;
@@ -264,10 +239,9 @@ left = new BinaryOpNode(op.image, left, right);
         throw new ParseException();
       }
       right = Relational();
-left = new BinaryOpNode(op.image, left, right);
+left = new BinaryOpNode(op.image, (ExpressionNode)left, (ExpressionNode)right);
     }
-{if ("" != null) return left;}
-    throw new Error("Missing return statement in function");
+return left;
 }
 
   final public ASTNode Relational() throws ParseException {ASTNode left, right; Token op;
@@ -299,10 +273,9 @@ left = new BinaryOpNode(op.image, left, right);
         throw new ParseException();
       }
       right = Additive();
-left = new BinaryOpNode(op.image, left, right);
+left = new BinaryOpNode(op.image, (ExpressionNode)left, (ExpressionNode)right);
     }
-{if ("" != null) return left;}
-    throw new Error("Missing return statement in function");
+return left;
 }
 
   final public ASTNode Additive() throws ParseException {ASTNode left, right; Token op;
@@ -334,10 +307,9 @@ left = new BinaryOpNode(op.image, left, right);
         throw new ParseException();
       }
       right = Term();
-left = new BinaryOpNode(op.image, left, right);
+left = new BinaryOpNode(op.image, (ExpressionNode)left, (ExpressionNode)right);
     }
-{if ("" != null) return left;}
-    throw new Error("Missing return statement in function");
+return left;
 }
 
   final public ASTNode Term() throws ParseException {ASTNode left, right; Token op;
@@ -369,71 +341,60 @@ left = new BinaryOpNode(op.image, left, right);
         throw new ParseException();
       }
       right = Factor();
-left = new BinaryOpNode(op.image, left, right);
+left = new BinaryOpNode(op.image, (ExpressionNode)left, (ExpressionNode)right);
     }
-{if ("" != null) return left;}
-    throw new Error("Missing return statement in function");
+return left;
 }
 
   final public ASTNode Factor() throws ParseException {Token t; ASTNode e;
     switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
     case INT_LITERAL:{
       t = jj_consume_token(INT_LITERAL);
-{if ("" != null) return new LiteralNode(t.image);}
-      break;
+return new LiteralNode(t.image);
       }
     case STRING_LITERAL:{
       t = jj_consume_token(STRING_LITERAL);
-{if ("" != null) return new LiteralNode(t.image);}
-      break;
+return new LiteralNode(t.image);
       }
     case TRUE:{
       t = jj_consume_token(TRUE);
-{if ("" != null) return new LiteralNode("true");}
-      break;
+return new LiteralNode("true");
       }
     case FALSE:{
       t = jj_consume_token(FALSE);
-{if ("" != null) return new LiteralNode("false");}
-      break;
+return new LiteralNode("false");
       }
     case NULL:{
       t = jj_consume_token(NULL);
-{if ("" != null) return new LiteralNode("null");}
-      break;
+return new LiteralNode("null");
       }
     case IDENTIFIER:{
       t = jj_consume_token(IDENTIFIER);
       switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
       case INCR:{
         jj_consume_token(INCR);
-{if ("" != null) return new UnaryOpNode("post++", new IdentifierNode(t.image));}
-        break;
+return new UnaryOpNode("post++", new IdentifierNode(t.image));
         }
       case DECR:{
         jj_consume_token(DECR);
-{if ("" != null) return new UnaryOpNode("post--", new IdentifierNode(t.image));}
-        break;
+return new UnaryOpNode("post--", new IdentifierNode(t.image));
         }
       default:
         jj_la1[15] = jj_gen;
-{if ("" != null) return new IdentifierNode(t.image);}
+return new IdentifierNode(t.image);
       }
-      break;
       }
     case LPAREN:{
       jj_consume_token(LPAREN);
       e = Expression();
       jj_consume_token(RPAREN);
-{if ("" != null) return e;}
-      break;
+return e;
       }
     default:
       jj_la1[16] = jj_gen;
       jj_consume_token(-1);
       throw new ParseException();
     }
-    throw new Error("Missing return statement in function");
 }
 
 // ---------- Control Structures ----------
@@ -453,8 +414,7 @@ left = new BinaryOpNode(op.image, left, right);
       jj_la1[17] = jj_gen;
       ;
     }
-{if ("" != null) return new IfNode(cond, thenBlock, elseBlock);}
-    throw new Error("Missing return statement in function");
+return new IfNode((ExpressionNode)cond, thenBlock, elseBlock);
 }
 
   final public ASTNode WhileStmt() throws ParseException {ASTNode cond, body;
@@ -463,8 +423,7 @@ left = new BinaryOpNode(op.image, left, right);
     cond = Expression();
     jj_consume_token(RPAREN);
     body = Statement();
-{if ("" != null) return new WhileNode(cond, body);}
-    throw new Error("Missing return statement in function");
+return new WhileNode((ExpressionNode)cond, body);
 }
 
 // Productions for for-loop
@@ -494,16 +453,14 @@ left = new BinaryOpNode(op.image, left, right);
       jj_la1[19] = jj_gen;
       ;
     }
-{if ("" != null) return new VarDeclNode(t.image, id.image, expr);}
-    throw new Error("Missing return statement in function");
+return new VarDeclNode(t.image, id.image, (ExpressionNode)expr);
 }
 
   final public ASTNode AssignmentForLoop() throws ParseException {Token id; ASTNode expr;
     id = jj_consume_token(IDENTIFIER);
     jj_consume_token(ASSIGN);
     expr = Expression();
-{if ("" != null) return new AssignmentNode(new IdentifierNode(id.image), expr);}
-    throw new Error("Missing return statement in function");
+return new AssignmentNode(new IdentifierNode(id.image), (ExpressionNode)expr);
 }
 
   final public ASTNode ForStmt() throws ParseException {ASTNode init=null, cond=null, update=null, body;
@@ -512,19 +469,10 @@ left = new BinaryOpNode(op.image, left, right);
     switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
     case INT:
     case IDENTIFIER:{
-      switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-      case INT:
-      case IDENTIFIER:{
+      if (getToken(1).kind == INT || getToken(2).kind == IDENTIFIER) {
         init = VarDeclForLoop();
-        break;
-        }{
+      } else {
         init = AssignmentForLoop();
-        break;
-        }
-      default:
-        jj_la1[20] = jj_gen;
-        jj_consume_token(-1);
-        throw new ParseException();
       }
       break;
       }
@@ -566,8 +514,7 @@ left = new BinaryOpNode(op.image, left, right);
     }
     jj_consume_token(RPAREN);
     body = Statement();
-{if ("" != null) return new ForNode(init, cond, update, body);}
-    throw new Error("Missing return statement in function");
+return new ForNode(init, (ExpressionNode)cond, update, body);
 }
 
   final public ASTNode Block() throws ParseException {List<ASTNode> stmts = new ArrayList<>(); ASTNode s;
@@ -583,8 +530,7 @@ left = new BinaryOpNode(op.image, left, right);
 stmts.add(s);
     }
     jj_consume_token(RBRACE);
-{if ("" != null) return new BlockNode(stmts);}
-    throw new Error("Missing return statement in function");
+return new BlockNode(stmts);
 }
 
   final public ASTNode FunctionDecl() throws ParseException {Token t; Token id; List<VarDeclNode> params = new ArrayList<>(); ASTNode body;
@@ -620,8 +566,7 @@ stmts.add(s);
     }
     jj_consume_token(RPAREN);
     body = Block();
-{if ("" != null) return new FunctionDeclNode(t.image, id.image, params, body);}
-    throw new Error("Missing return statement in function");
+return new FunctionDeclNode(t.image, id.image, params, (BlockNode)body);
 }
 
   final public List<VarDeclNode> ParamList() throws ParseException {List<VarDeclNode> params = new ArrayList<>();
@@ -671,8 +616,7 @@ params.add(new VarDeclNode(t.image, id.image, null));
       id = jj_consume_token(IDENTIFIER);
 params.add(new VarDeclNode(t.image, id.image, null));
     }
-{if ("" != null) return params;}
-    throw new Error("Missing return statement in function");
+return params;
 }
 
   private boolean jj_2_1(int xla)
