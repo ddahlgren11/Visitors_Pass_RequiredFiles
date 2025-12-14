@@ -18,4 +18,5 @@ public interface ASTVisitor {
     void visitForNode(ForNode node);
     void visitWhileNode(WhileNode node);
     void visitUnaryOpNode(UnaryOpNode node);
+    void visitEmptyNode(EmptyNode emptyNode);
 }

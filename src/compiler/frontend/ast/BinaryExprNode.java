@@ -8,14 +8,27 @@ public class BinaryExprNode extends ExpressionNode {
     public final ExpressionNode right;
 
     public BinaryExprNode(String op, ExpressionNode left, ExpressionNode right) {
-        this.op = op; this.left = left; this.right = right;
+        this.op = op;
+        this.left = left;
+        this.right = right;
     }
 
-    public String getOp() { return op; }
-    public ExpressionNode getLeft() { return left; }
-    public ExpressionNode getRight() { return right; }
+    public String getOp() {
+        return op;
+    }
 
-    @Override public void accept(ASTVisitor visitor) { visitor.visitBinaryExprNode(this); }
+    public ExpressionNode getLeft() {
+        return left;
+    }
+
+    public ExpressionNode getRight() {
+        return right;
+    }
+
+    @Override
+    public void accept(ASTVisitor visitor) {
+        visitor.visitBinaryExprNode(this);
+    }
 
     @Override
     public ASTTestTree toASTTestTree() {
