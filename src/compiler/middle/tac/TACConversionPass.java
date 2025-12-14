@@ -17,6 +17,10 @@ import compiler.frontend.ast.LiteralNode;
 import compiler.frontend.ast.ReturnNode;
 import compiler.frontend.ast.VarDeclNode;
 import compiler.frontend.ast.WhileNode;
+import compiler.frontend.ast.ClassDeclNode;
+import compiler.frontend.ast.NewExprNode;
+import compiler.frontend.ast.MethodCallNode;
+import compiler.frontend.ast.MemberAccessNode;
 
 public class TACConversionPass implements ASTVisitor {
 
@@ -133,6 +137,29 @@ public class TACConversionPass implements ASTVisitor {
 
     @Override
     public void visitEmptyNode(compiler.frontend.ast.EmptyNode emptyNode) {
+        // TODO Auto-generated method stub
+        lastResult = null;
+    }
+
+    @Override
+    public void visitClassDeclNode(ClassDeclNode node) {
+        // TODO Auto-generated method stub
+    }
+
+    @Override
+    public void visitNewExprNode(NewExprNode node) {
+        // TODO Auto-generated method stub
+        lastResult = null;
+    }
+
+    @Override
+    public void visitMethodCallNode(MethodCallNode node) {
+        // TODO Auto-generated method stub
+        lastResult = null;
+    }
+
+    @Override
+    public void visitMemberAccessNode(MemberAccessNode node) {
         // TODO Auto-generated method stub
         lastResult = null;
     }

@@ -37,17 +37,9 @@ public class FrontEndPass implements CompilerPass {
 
         try {
             MyParser parser = new MyParser(input);
-            // The real parser should have a root method (e.g., Program()). If not available,
-            // store a placeholder empty block AST for now so the pipeline can continue.
-            ASTNode ast;
-            try {
-                // attempt to call a common root method if it exists
-                ast = parser.Assignment();
-            } catch (Exception ex) {
-                ast = new BlockNode(Collections.emptyList());
-            }
+            ASTNode ast = parser.Program();
             context.setAst(ast);
-            System.out.println("Parsing (best-effort) completed.");
+            System.out.println("Parsing completed.");
         } catch (Exception e) {
             if (e instanceof ParseException) {
                 if (reporter != null) {

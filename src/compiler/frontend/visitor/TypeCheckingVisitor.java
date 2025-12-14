@@ -108,4 +108,36 @@ public class TypeCheckingVisitor implements ASTVisitor {
     public void visitEmptyNode(EmptyNode emptyNode) {
         // Do nothing
     }   
+
+    @Override
+    public void visitClassDeclNode(ClassDeclNode node) {
+        for (VarDeclNode field : node.fields) {
+            field.accept(this);
+        }
+        for (FunctionDeclNode method : node.methods) {
+            method.accept(this);
+        }
+    }
+
+    @Override
+    public void visitNewExprNode(NewExprNode node) {
+        for (ASTNode arg : node.args) {
+            arg.accept(this);
+        }
+    }
+
+    @Override
+    public void visitMethodCallNode(MethodCallNode node) {
+        if (node.object != null) {
+            node.object.accept(this);
+        }
+        for (ASTNode arg : node.args) {
+            arg.accept(this);
+        }
+    }
+
+    @Override
+    public void visitMemberAccessNode(MemberAccessNode node) {
+        node.object.accept(this);
+    }
 }
