@@ -105,8 +105,8 @@ ASTNode Statement() :
     ASTNode n;
 }
 {
-      n=VarDecl()       { return n; }
-    | n=Assignment()    { return n; }
+      LOOKAHEAD(VarDecl()) n=VarDecl()       { return n; }
+    | LOOKAHEAD(Assignment()) n=Assignment() { return n; }
     | n=IfStmt()        { return n; }
     | n=WhileStmt()     { return n; }
     | n=ForStmt()       { return n; }
@@ -159,8 +159,8 @@ ASTNode ExprStmt() :
     ASTNode e;
 }
 {
-    LOOKAHEAD({ getToken(1).kind != RETURN })
-    e=Expression() <SEMI> { return e; }
+    e=Expression() <SEMI>
+    { return e; }
 }
 
 // ---------- Expressions ----------
@@ -239,6 +239,7 @@ ExpressionNode Term() :
 ExpressionNode Factor() :
 {
     Token t; ExpressionNode e;
+    ExpressionNode result;
 }
 {
       t=<INT_LITERAL>     { return new LiteralNode(t.image); }
@@ -246,12 +247,18 @@ ExpressionNode Factor() :
     | t=<TRUE>            { return new LiteralNode("true"); }
     | t=<FALSE>           { return new LiteralNode("false"); }
     | t=<NULL>            { return new LiteralNode("null"); }
+
     | t=<IDENTIFIER>
-        (
-            <INCR> { return new UnaryOpNode("post++", new IdentifierNode(t.image)); }
-          | <DECR> { return new UnaryOpNode("post--", new IdentifierNode(t.image)); }
-          |        { return new IdentifierNode(t.image); }
-        )
+      {
+          // default: just the identifier
+          result = new IdentifierNode(t.image);
+      }
+      (
+          <INCR> { result = new UnaryOpNode("post++", new IdentifierNode(t.image)); }
+        | <DECR> { result = new UnaryOpNode("post--", new IdentifierNode(t.image)); }
+      )?
+      { return result; }
+
     | <LPAREN> e=Expression() <RPAREN> { return e; }
 }
 

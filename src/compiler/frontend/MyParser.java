@@ -17,18 +17,104 @@ public class MyParser implements MyParserConstants {
         }
     }
 
-    // ---------- Program ----------
-    final public ASTNode Program() throws ParseException {
-        List<ASTNode> stmts = new ArrayList<>();
-        while (getToken(1).kind != EOF) {
-            if (getToken(1).kind == CLASS) {
-                stmts.add(ClassDecl());
-            } else {
-                stmts.add(Statement());
-            }
+// ---------- Program ----------
+  final public ASTNode Program() throws ParseException {List<ASTNode> stmts = new ArrayList<>();
+    ASTNode s;
+    label_1:
+    while (true) {
+      switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
+      case IF:
+      case WHILE:
+      case FOR:
+      case VOID:
+      case RETURN:
+      case INT:
+      case TRUE:
+      case FALSE:
+      case NULL:
+      case INT_LITERAL:
+      case STRING_LITERAL:
+      case LPAREN:
+      case LBRACE:
+      case SEMI:
+      case IDENTIFIER:{
+        ;
+        break;
         }
-        jj_consume_token(EOF);
-        return new BlockNode(stmts);
+      default:
+        jj_la1[0] = jj_gen;
+        break label_1;
+      }
+      s = Statement();
+stmts.add(s);
+    }
+    jj_consume_token(0);
+{if ("" != null) return new BlockNode(stmts);}
+    throw new Error("Missing return statement in function");
+}
+
+// ---------- Statements ----------
+  final public ASTNode Statement() throws ParseException {ASTNode n;
+    if (jj_2_1(2147483647)) {
+      n = VarDecl();
+{if ("" != null) return n;}
+    } else if (jj_2_2(2147483647)) {
+      n = Assignment();
+{if ("" != null) return n;}
+    } else {
+      switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
+      case IF:{
+        n = IfStmt();
+{if ("" != null) return n;}
+        break;
+        }
+      case WHILE:{
+        n = WhileStmt();
+{if ("" != null) return n;}
+        break;
+        }
+      case FOR:{
+        n = ForStmt();
+{if ("" != null) return n;}
+        break;
+        }
+      case LBRACE:{
+        n = Block();
+{if ("" != null) return n;}
+        break;
+        }
+      case VOID:
+      case INT:
+      case IDENTIFIER:{
+        n = FunctionDecl();
+{if ("" != null) return n;}
+        break;
+        }
+      case RETURN:{
+        n = ReturnStmt();
+{if ("" != null) return n;}
+        break;
+        }
+      case TRUE:
+      case FALSE:
+      case NULL:
+      case INT_LITERAL:
+      case STRING_LITERAL:
+      case LPAREN:{
+        n = ExprStmt();
+{if ("" != null) return n;}
+        break;
+        }
+      case SEMI:{
+        jj_consume_token(SEMI);
+{if ("" != null) return new EmptyNode();}
+        break;
+        }
+      default:
+        jj_la1[1] = jj_gen;
+        jj_consume_token(-1);
+        throw new ParseException();
+      }
     }
 
     final public ClassDeclNode ClassDecl() throws ParseException {
@@ -117,15 +203,23 @@ public class MyParser implements MyParserConstants {
         }
     }
 
-    final public ASTNode ReturnStmt() throws ParseException {
-        jj_consume_token(RETURN);
-        ExpressionNode expr = null;
-        if (getToken(1).kind != SEMI) {
-            expr = Expression();
-        }
-        jj_consume_token(SEMI);
-        return new ReturnNode(expr);
-    }
+// Assignment
+  final public AssignmentNode Assignment() throws ParseException {Token id; ExpressionNode expr;
+    id = jj_consume_token(IDENTIFIER);
+    jj_consume_token(ASSIGN);
+    expr = Expression();
+    jj_consume_token(SEMI);
+{if ("" != null) return new AssignmentNode(new IdentifierNode(id.image), expr);}
+    throw new Error("Missing return statement in function");
+}
+
+// Expr stmt
+  final public ASTNode ExprStmt() throws ParseException {ASTNode e;
+    e = Expression();
+    jj_consume_token(SEMI);
+{if ("" != null) return e;}
+    throw new Error("Missing return statement in function");
+}
 
     final public ASTNode VarDecl() throws ParseException {
         String type = ParseType();
@@ -194,32 +288,198 @@ public class MyParser implements MyParserConstants {
         return left;
     }
 
-    final public ExpressionNode Relational() throws ParseException {
-        ExpressionNode left = Additive();
-        while (getToken(1).kind == LT || getToken(1).kind == GT) {
-            Token op = jj_consume_token(getToken(1).kind);
-            ExpressionNode right = Additive();
-            left = new BinaryOpNode(op.image, left, right);
+  final public ExpressionNode Factor() throws ParseException {Token t; ExpressionNode e;
+    ExpressionNode result;
+    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
+    case INT_LITERAL:{
+      t = jj_consume_token(INT_LITERAL);
+{if ("" != null) return new LiteralNode(t.image);}
+      break;
+      }
+    case STRING_LITERAL:{
+      t = jj_consume_token(STRING_LITERAL);
+{if ("" != null) return new LiteralNode(t.image);}
+      break;
+      }
+    case TRUE:{
+      t = jj_consume_token(TRUE);
+{if ("" != null) return new LiteralNode("true");}
+      break;
+      }
+    case FALSE:{
+      t = jj_consume_token(FALSE);
+{if ("" != null) return new LiteralNode("false");}
+      break;
+      }
+    case NULL:{
+      t = jj_consume_token(NULL);
+{if ("" != null) return new LiteralNode("null");}
+      break;
+      }
+    case IDENTIFIER:{
+      t = jj_consume_token(IDENTIFIER);
+// default: just the identifier
+          result = new IdentifierNode(t.image);
+      switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
+      case INCR:
+      case DECR:{
+        switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
+        case INCR:{
+          jj_consume_token(INCR);
+result = new UnaryOpNode("post++", new IdentifierNode(t.image));
+          break;
+          }
+        case DECR:{
+          jj_consume_token(DECR);
+result = new UnaryOpNode("post--", new IdentifierNode(t.image));
+          break;
+          }
+        default:
+          jj_la1[15] = jj_gen;
+          jj_consume_token(-1);
+          throw new ParseException();
         }
-        return left;
+        break;
+        }
+      default:
+        jj_la1[16] = jj_gen;
+        ;
+      }
+{if ("" != null) return result;}
+      break;
+      }
+    case LPAREN:{
+      jj_consume_token(LPAREN);
+      e = Expression();
+      jj_consume_token(RPAREN);
+{if ("" != null) return e;}
+      break;
+      }
+    default:
+      jj_la1[17] = jj_gen;
+      jj_consume_token(-1);
+      throw new ParseException();
     }
 
-    final public ExpressionNode Additive() throws ParseException {
-        ExpressionNode left = Term();
-        while (getToken(1).kind == PLUS || getToken(1).kind == MINUS) {
-            Token op = jj_consume_token(getToken(1).kind);
-            ExpressionNode right = Term();
-            left = new BinaryOpNode(op.image, left, right);
-        }
-        return left;
+// ---------- Control Structures ----------
+  final public ASTNode IfStmt() throws ParseException {ExpressionNode cond; BlockNode thenBlock, elseBlock=null;
+    jj_consume_token(IF);
+    jj_consume_token(LPAREN);
+    cond = Expression();
+    jj_consume_token(RPAREN);
+    thenBlock = Block();
+    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
+    case ELSE:{
+      jj_consume_token(ELSE);
+      elseBlock = Block();
+      break;
+      }
+    default:
+      jj_la1[18] = jj_gen;
+      ;
     }
+{if ("" != null) return new IfNode(cond, thenBlock, elseBlock);}
+    throw new Error("Missing return statement in function");
+}
 
-    final public ExpressionNode Term() throws ParseException {
-        ExpressionNode left = Factor();
-        while (getToken(1).kind == MULT || getToken(1).kind == DIV) {
-            Token op = jj_consume_token(getToken(1).kind);
-            ExpressionNode right = Factor();
-            left = new BinaryOpNode(op.image, left, right);
+  final public ASTNode WhileStmt() throws ParseException {ExpressionNode cond; BlockNode body;
+    jj_consume_token(WHILE);
+    jj_consume_token(LPAREN);
+    cond = Expression();
+    jj_consume_token(RPAREN);
+    body = Block();
+{if ("" != null) return new WhileNode(cond, body);}
+    throw new Error("Missing return statement in function");
+}
+
+// Productions for for-loop
+  final public VarDeclNode VarDeclForLoop() throws ParseException {Token t; Token id; ExpressionNode expr = null;
+    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
+    case INT:{
+      t = jj_consume_token(INT);
+      break;
+      }
+    case IDENTIFIER:{
+      t = jj_consume_token(IDENTIFIER);
+      break;
+      }
+    default:
+      jj_la1[19] = jj_gen;
+      jj_consume_token(-1);
+      throw new ParseException();
+    }
+    id = jj_consume_token(IDENTIFIER);
+    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
+    case ASSIGN:{
+      jj_consume_token(ASSIGN);
+      expr = Expression();
+      break;
+      }
+    default:
+      jj_la1[20] = jj_gen;
+      ;
+    }
+{if ("" != null) return new VarDeclNode(t.image, id.image, expr);}
+    throw new Error("Missing return statement in function");
+}
+
+  final public AssignmentNode AssignmentForLoop() throws ParseException {Token id; ExpressionNode expr;
+    id = jj_consume_token(IDENTIFIER);
+    jj_consume_token(ASSIGN);
+    expr = Expression();
+{if ("" != null) return new AssignmentNode(new IdentifierNode(id.image), expr);}
+    throw new Error("Missing return statement in function");
+}
+
+  final public ASTNode ForStmt() throws ParseException {ExpressionNode cond=null, update=null; BlockNode body; VarDeclNode vardeclinit=null; AssignmentNode assignmentinit=null;
+    jj_consume_token(FOR);
+    jj_consume_token(LPAREN);
+    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
+    case IDENTIFIER:{
+      assignmentinit = AssignmentForLoop();
+      break;
+      }
+    default:
+      jj_la1[21] = jj_gen;
+      ;
+    }
+    jj_consume_token(SEMI);
+    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
+    case TRUE:
+    case FALSE:
+    case NULL:
+    case INT_LITERAL:
+    case STRING_LITERAL:
+    case LPAREN:
+    case IDENTIFIER:{
+      cond = Expression();
+      break;
+      }
+    default:
+      jj_la1[22] = jj_gen;
+      ;
+    }
+    jj_consume_token(SEMI);
+    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
+    case TRUE:
+    case FALSE:
+    case NULL:
+    case INT_LITERAL:
+    case STRING_LITERAL:
+    case LPAREN:
+    case IDENTIFIER:{
+      update = Expression();
+      break;
+      }
+    default:
+      jj_la1[23] = jj_gen;
+      ;
+    }
+    jj_consume_token(RPAREN);
+    body = Block();
+ForNode returnMe =null;
+        if (vardeclinit != null) {
+            returnMe = new ForNode(vardeclinit, cond, update, body);
         }
         return left;
     }
@@ -289,30 +549,116 @@ public class MyParser implements MyParserConstants {
                 throw new ParseException("Unexpected token in Factor: " + getToken(1));
         }
 
-        while (getToken(1).kind == DOT) {
-            jj_consume_token(DOT);
-            Token member = jj_consume_token(IDENTIFIER);
-            if (getToken(1).kind == LPAREN) {
-                jj_consume_token(LPAREN);
-                List<ExpressionNode> mArgs = new ArrayList<>();
-                if (getToken(1).kind != RPAREN) {
-                    mArgs = ArgList();
-                }
-                jj_consume_token(RPAREN);
-                e = new MethodCallNode(e, member.image, mArgs);
-            } else {
-                e = new MemberAccessNode(e, member.image);
-            }
-        }
-        return e;
-    }
+        {if ("" != null) return returnMe;}
+    throw new Error("Missing return statement in function");
+}
 
-    List<ExpressionNode> ArgList() throws ParseException {
-        List<ExpressionNode> args = new ArrayList<>();
-        args.add(Expression());
-        while (getToken(1).kind == COMMA) {
-            jj_consume_token(COMMA);
-            args.add(Expression());
+  final public BlockNode Block() throws ParseException {List<ASTNode> stmts = new ArrayList<>(); ASTNode s;
+    jj_consume_token(LBRACE);
+    label_8:
+    while (true) {
+      switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
+      case IF:
+      case WHILE:
+      case FOR:
+      case VOID:
+      case RETURN:
+      case INT:
+      case TRUE:
+      case FALSE:
+      case NULL:
+      case INT_LITERAL:
+      case STRING_LITERAL:
+      case LPAREN:
+      case LBRACE:
+      case SEMI:
+      case IDENTIFIER:{
+        ;
+        break;
+        }
+      default:
+        jj_la1[24] = jj_gen;
+        break label_8;
+      }
+      s = Statement();
+stmts.add(s);
+    }
+    jj_consume_token(RBRACE);
+{if ("" != null) return new BlockNode(stmts);}
+    throw new Error("Missing return statement in function");
+}
+
+  final public ASTNode FunctionDecl() throws ParseException {Token t; Token id; List<VarDeclNode> params = new ArrayList<>(); BlockNode body;
+    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
+    case VOID:{
+      t = jj_consume_token(VOID);
+      break;
+      }
+    case INT:{
+      t = jj_consume_token(INT);
+      break;
+      }
+    case IDENTIFIER:{
+      t = jj_consume_token(IDENTIFIER);
+      break;
+      }
+    default:
+      jj_la1[25] = jj_gen;
+      jj_consume_token(-1);
+      throw new ParseException();
+    }
+    id = jj_consume_token(IDENTIFIER);
+    jj_consume_token(LPAREN);
+    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
+    case INT:
+    case IDENTIFIER:{
+      params = ParamList();
+      break;
+      }
+    default:
+      jj_la1[26] = jj_gen;
+      ;
+    }
+    jj_consume_token(RPAREN);
+    body = Block();
+{if ("" != null) return new FunctionDeclNode(t.image, id.image, params, body);}
+    throw new Error("Missing return statement in function");
+}
+
+  final public List<VarDeclNode> ParamList() throws ParseException {List<VarDeclNode> params = new ArrayList<>();
+    Token t, id;
+    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
+    case INT:{
+      t = jj_consume_token(INT);
+      break;
+      }
+    case IDENTIFIER:{
+      t = jj_consume_token(IDENTIFIER);
+      break;
+      }
+    default:
+      jj_la1[27] = jj_gen;
+      jj_consume_token(-1);
+      throw new ParseException();
+    }
+    id = jj_consume_token(IDENTIFIER);
+params.add(new VarDeclNode(t.image, id.image, null));
+    label_9:
+    while (true) {
+      switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
+      case COMMA:{
+        ;
+        break;
+        }
+      default:
+        jj_la1[28] = jj_gen;
+        break label_9;
+      }
+      jj_consume_token(COMMA);
+      switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
+      case INT:{
+        t = jj_consume_token(INT);
+        break;
         }
         return args;
     }
@@ -336,103 +682,303 @@ public class MyParser implements MyParserConstants {
                 elseBlock = Block();
             }
         }
-        return new IfNode(cond, thenBlock, elseBlock);
+      default:
+        jj_la1[29] = jj_gen;
+        jj_consume_token(-1);
+        throw new ParseException();
+      }
+      id = jj_consume_token(IDENTIFIER);
+params.add(new VarDeclNode(t.image, id.image, null));
     }
 
-    final public ASTNode WhileStmt() throws ParseException {
-        jj_consume_token(WHILE);
-        jj_consume_token(LPAREN);
-        ExpressionNode cond = Expression();
-        jj_consume_token(RPAREN);
-        BlockNode body = Block();
-        return new WhileNode(cond, body);
+  private boolean jj_2_1(int xla)
+ {
+    jj_la = xla; jj_lastpos = jj_scanpos = token;
+    try { return (!jj_3_1()); }
+    catch(LookaheadSuccess ls) { return true; }
+    finally { jj_save(0, xla); }
+  }
+
+  private boolean jj_2_2(int xla)
+ {
+    jj_la = xla; jj_lastpos = jj_scanpos = token;
+    try { return (!jj_3_2()); }
+    catch(LookaheadSuccess ls) { return true; }
+    finally { jj_save(1, xla); }
+  }
+
+  private boolean jj_3R_Additive_221_7_24()
+ {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_scan_token(28)) {
+    jj_scanpos = xsp;
+    if (jj_scan_token(29)) return true;
     }
+    if (jj_3R_Term_232_5_23()) return true;
+    return false;
+  }
 
-    final public ASTNode ForStmt() throws ParseException {
-        jj_consume_token(FOR);
-        jj_consume_token(LPAREN);
-
-        ASTNode init = null;
-        if (getToken(1).kind == INT) {
-            init = VarDeclForLoop();
-        } else if (getToken(1).kind == IDENTIFIER) {
-             if (getToken(2).kind == ASSIGN) {
-                 init = AssignmentForLoop();
-             } else if (getToken(2).kind == IDENTIFIER) {
-                 init = VarDeclForLoop();
-             }
-        }
-        jj_consume_token(SEMI);
-
-        ExpressionNode cond = null;
-        if (getToken(1).kind != SEMI) cond = Expression();
-        jj_consume_token(SEMI);
-
-        ExpressionNode update = null;
-        if (getToken(1).kind != RPAREN) update = Expression();
-        jj_consume_token(RPAREN);
-
-        BlockNode body = Block();
-
-        return new ForNode(init, cond, update, body);
+  private boolean jj_3R_LogicalOr_174_5_14()
+ {
+    if (jj_3R_LogicalAnd_185_5_15()) return true;
+    Token xsp;
+    while (true) {
+      xsp = jj_scanpos;
+      if (jj_3R_LogicalOr_174_25_16()) { jj_scanpos = xsp; break; }
     }
+    return false;
+  }
 
-    final public VarDeclNode VarDeclForLoop() throws ParseException {
-        String type = ParseType();
-        Token id = jj_consume_token(IDENTIFIER);
-        ExpressionNode expr = null;
-        if (getToken(1).kind == ASSIGN) {
-            jj_consume_token(ASSIGN);
-            expr = Expression();
-        }
-        return new VarDeclNode(type, id.image, expr);
+  private boolean jj_3R_Additive_220_5_21()
+ {
+    if (jj_3R_Term_232_5_23()) return true;
+    Token xsp;
+    while (true) {
+      xsp = jj_scanpos;
+      if (jj_3R_Additive_221_7_24()) { jj_scanpos = xsp; break; }
     }
+    return false;
+  }
 
-    final public AssignmentNode AssignmentForLoop() throws ParseException {
-        Token id = jj_consume_token(IDENTIFIER);
-        jj_consume_token(ASSIGN);
-        ExpressionNode expr = Expression();
-        return new AssignmentNode(new IdentifierNode(id.image), expr);
+  private boolean jj_3R_Factor_258_11_36()
+ {
+    if (jj_scan_token(DECR)) return true;
+    return false;
+  }
+
+  private boolean jj_3R_Factor_262_7_33()
+ {
+    if (jj_scan_token(LPAREN)) return true;
+    if (jj_3R_Expression_167_55_13()) return true;
+    if (jj_scan_token(RPAREN)) return true;
+    return false;
+  }
+
+  private boolean jj_3R_Expression_167_55_13()
+ {
+    if (jj_3R_LogicalOr_174_5_14()) return true;
+    return false;
+  }
+
+  private boolean jj_3R_Factor_257_11_35()
+ {
+    if (jj_scan_token(INCR)) return true;
+    return false;
+  }
+
+  private boolean jj_3R_Factor_257_11_34()
+ {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_3R_Factor_257_11_35()) {
+    jj_scanpos = xsp;
+    if (jj_3R_Factor_258_11_36()) return true;
     }
+    return false;
+  }
 
-    final public BlockNode Block() throws ParseException {
-        jj_consume_token(LBRACE);
-        List<ASTNode> stmts = new ArrayList<>();
-        while (getToken(1).kind != RBRACE) {
-            stmts.add(Statement());
-        }
-        jj_consume_token(RBRACE);
-        return new BlockNode(stmts);
+  private boolean jj_3_2()
+ {
+    if (jj_3R_Assignment_150_5_11()) return true;
+    return false;
+  }
+
+  private boolean jj_3_1()
+ {
+    if (jj_3R_VarDecl_138_5_10()) return true;
+    return false;
+  }
+
+  private boolean jj_3R_Relational_209_7_22()
+ {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_scan_token(32)) {
+    jj_scanpos = xsp;
+    if (jj_scan_token(33)) return true;
     }
+    if (jj_3R_Additive_220_5_21()) return true;
+    return false;
+  }
 
-    final public ASTNode FunctionDecl() throws ParseException {
-        String retType = ParseType();
-        Token name = jj_consume_token(IDENTIFIER);
-        jj_consume_token(LPAREN);
-        List<VarDeclNode> params = new ArrayList<>();
-        if (getToken(1).kind != RPAREN) params = ParamList();
-        jj_consume_token(RPAREN);
-        BlockNode body = Block();
-        return new FunctionDeclNode(retType, name.image, params, body);
+  private boolean jj_3R_Relational_208_5_19()
+ {
+    if (jj_3R_Additive_220_5_21()) return true;
+    Token xsp;
+    while (true) {
+      xsp = jj_scanpos;
+      if (jj_3R_Relational_209_7_22()) { jj_scanpos = xsp; break; }
     }
+    return false;
+  }
 
-    final public List<VarDeclNode> ParamList() throws ParseException {
-        List<VarDeclNode> params = new ArrayList<>();
-        params.add(Param());
-        while (getToken(1).kind == COMMA) {
-            jj_consume_token(COMMA);
-            params.add(Param());
-        }
-        return params;
+  private boolean jj_3R_Factor_251_7_32()
+ {
+    if (jj_scan_token(IDENTIFIER)) return true;
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_3R_Factor_257_11_34()) jj_scanpos = xsp;
+    return false;
+  }
+
+  private boolean jj_3R_Factor_249_7_31()
+ {
+    if (jj_scan_token(NULL)) return true;
+    return false;
+  }
+
+  private boolean jj_3R_Factor_248_7_30()
+ {
+    if (jj_scan_token(FALSE)) return true;
+    return false;
+  }
+
+  private boolean jj_3R_LogicalAnd_185_23_18()
+ {
+    if (jj_scan_token(AND)) return true;
+    if (jj_3R_Equality_196_5_17()) return true;
+    return false;
+  }
+
+  private boolean jj_3R_Factor_247_7_29()
+ {
+    if (jj_scan_token(TRUE)) return true;
+    return false;
+  }
+
+  private boolean jj_3R_Factor_246_7_28()
+ {
+    if (jj_scan_token(STRING_LITERAL)) return true;
+    return false;
+  }
+
+  private boolean jj_3R_Factor_245_7_27()
+ {
+    if (jj_scan_token(INT_LITERAL)) return true;
+    return false;
+  }
+
+  private boolean jj_3R_Factor_245_7_25()
+ {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_3R_Factor_245_7_27()) {
+    jj_scanpos = xsp;
+    if (jj_3R_Factor_246_7_28()) {
+    jj_scanpos = xsp;
+    if (jj_3R_Factor_247_7_29()) {
+    jj_scanpos = xsp;
+    if (jj_3R_Factor_248_7_30()) {
+    jj_scanpos = xsp;
+    if (jj_3R_Factor_249_7_31()) {
+    jj_scanpos = xsp;
+    if (jj_3R_Factor_251_7_32()) {
+    jj_scanpos = xsp;
+    if (jj_3R_Factor_262_7_33()) return true;
     }
-
-    VarDeclNode Param() throws ParseException {
-        String type = ParseType();
-        Token id = jj_consume_token(IDENTIFIER);
-        return new VarDeclNode(type, id.image, null);
     }
+    }
+    }
+    }
+    }
+    return false;
+  }
 
-    // Infrastructure
+  private boolean jj_3R_Equality_197_7_20()
+ {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_scan_token(24)) {
+    jj_scanpos = xsp;
+    if (jj_scan_token(34)) return true;
+    }
+    if (jj_3R_Relational_208_5_19()) return true;
+    return false;
+  }
+
+  private boolean jj_3R_Assignment_150_5_11()
+ {
+    if (jj_scan_token(IDENTIFIER)) return true;
+    if (jj_scan_token(ASSIGN)) return true;
+    if (jj_3R_Expression_167_55_13()) return true;
+    if (jj_scan_token(SEMI)) return true;
+    return false;
+  }
+
+  private boolean jj_3R_Equality_196_5_17()
+ {
+    if (jj_3R_Relational_208_5_19()) return true;
+    Token xsp;
+    while (true) {
+      xsp = jj_scanpos;
+      if (jj_3R_Equality_197_7_20()) { jj_scanpos = xsp; break; }
+    }
+    return false;
+  }
+
+  private boolean jj_3R_LogicalOr_174_25_16()
+ {
+    if (jj_scan_token(OR)) return true;
+    if (jj_3R_LogicalAnd_185_5_15()) return true;
+    return false;
+  }
+
+  private boolean jj_3R_Term_233_7_26()
+ {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_scan_token(30)) {
+    jj_scanpos = xsp;
+    if (jj_scan_token(31)) return true;
+    }
+    if (jj_3R_Factor_245_7_25()) return true;
+    return false;
+  }
+
+  private boolean jj_3R_VarDecl_138_5_10()
+ {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_scan_token(13)) {
+    jj_scanpos = xsp;
+    if (jj_scan_token(44)) return true;
+    }
+    if (jj_scan_token(IDENTIFIER)) return true;
+    xsp = jj_scanpos;
+    if (jj_3R_VarDecl_138_50_12()) jj_scanpos = xsp;
+    if (jj_scan_token(SEMI)) return true;
+    return false;
+  }
+
+  private boolean jj_3R_LogicalAnd_185_5_15()
+ {
+    if (jj_3R_Equality_196_5_17()) return true;
+    Token xsp;
+    while (true) {
+      xsp = jj_scanpos;
+      if (jj_3R_LogicalAnd_185_23_18()) { jj_scanpos = xsp; break; }
+    }
+    return false;
+  }
+
+  private boolean jj_3R_Term_232_5_23()
+ {
+    if (jj_3R_Factor_245_7_25()) return true;
+    Token xsp;
+    while (true) {
+      xsp = jj_scanpos;
+      if (jj_3R_Term_233_7_26()) { jj_scanpos = xsp; break; }
+    }
+    return false;
+  }
+
+  private boolean jj_3R_VarDecl_138_50_12()
+ {
+    if (jj_scan_token(ASSIGN)) return true;
+    if (jj_3R_Expression_167_55_13()) return true;
+    return false;
+  }
 
   /** Generated Token Manager. */
   public MyParserTokenManager token_source;
@@ -444,11 +990,8 @@ public class MyParser implements MyParserConstants {
   private int jj_ntk;
   private Token jj_scanpos, jj_lastpos;
   private int jj_la;
-  /** Whether we are looking ahead. */
-  private boolean jj_lookingAhead = false;
-  private boolean jj_semLA;
   private int jj_gen;
-  final private int[] jj_la1 = new int[28];
+  final private int[] jj_la1 = new int[30];
   static private int[] jj_la1_0;
   static private int[] jj_la1_1;
   static {
@@ -456,12 +999,12 @@ public class MyParser implements MyParserConstants {
 	   jj_la1_init_1();
 	}
 	private static void jj_la1_init_0() {
-	   jj_la1_0 = new int[] {0x3e80,0x0,0xc1c000,0x2000,0x2000000,0x0,0x0,0x1000000,0x1000000,0x0,0x0,0x30000000,0x30000000,0xc0000000,0xc0000000,0xc000000,0xc1c000,0x100,0x2000,0x2000000,0x0,0xc1c000,0xc1c000,0x2800,0x2000,0x2000,0x0,0x2000,};
+	   jj_la1_0 = new int[] {0xc1fe80,0xc1fe80,0xc1c000,0x2000,0x2000000,0x0,0x0,0x1000000,0x1000000,0x0,0x0,0x30000000,0x30000000,0xc0000000,0xc0000000,0xc000000,0xc000000,0xc1c000,0x100,0x2000,0x2000000,0x0,0xc1c000,0xc1c000,0xc1fe80,0x2800,0x2000,0x2000,0x0,0x2000,};
 	}
 	private static void jj_la1_init_1() {
-	   jj_la1_1 = new int[] {0x1100,0x400,0x1040,0x1000,0x0,0x10,0x8,0x4,0x4,0x3,0x3,0x0,0x0,0x0,0x0,0x0,0x1040,0x0,0x1000,0x0,0x1000,0x1040,0x1040,0x1000,0x1000,0x1000,0x800,0x1000,};
+	   jj_la1_1 = new int[] {0x1540,0x1540,0x1040,0x1000,0x0,0x10,0x8,0x4,0x4,0x3,0x3,0x0,0x0,0x0,0x0,0x0,0x0,0x1040,0x0,0x1000,0x0,0x1000,0x1040,0x1040,0x1540,0x1000,0x1000,0x1000,0x800,0x1000,};
 	}
-  final private JJCalls[] jj_2_rtns = new JJCalls[3];
+  final private JJCalls[] jj_2_rtns = new JJCalls[2];
   private boolean jj_rescan = false;
   private int jj_gc = 0;
 
@@ -476,7 +1019,7 @@ public class MyParser implements MyParserConstants {
 	 token = new Token();
 	 jj_ntk = -1;
 	 jj_gen = 0;
-	 for (int i = 0; i < 28; i++) jj_la1[i] = -1;
+	 for (int i = 0; i < 30; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -491,7 +1034,7 @@ public class MyParser implements MyParserConstants {
 	 token = new Token();
 	 jj_ntk = -1;
 	 jj_gen = 0;
-	 for (int i = 0; i < 28; i++) jj_la1[i] = -1;
+	 for (int i = 0; i < 30; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -502,7 +1045,7 @@ public class MyParser implements MyParserConstants {
 	 token = new Token();
 	 jj_ntk = -1;
 	 jj_gen = 0;
-	 for (int i = 0; i < 28; i++) jj_la1[i] = -1;
+	 for (int i = 0; i < 30; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -521,7 +1064,7 @@ public class MyParser implements MyParserConstants {
 	 token = new Token();
 	 jj_ntk = -1;
 	 jj_gen = 0;
-	 for (int i = 0; i < 28; i++) jj_la1[i] = -1;
+	 for (int i = 0; i < 30; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -531,7 +1074,7 @@ public class MyParser implements MyParserConstants {
 	 token = new Token();
 	 jj_ntk = -1;
 	 jj_gen = 0;
-	 for (int i = 0; i < 28; i++) jj_la1[i] = -1;
+	 for (int i = 0; i < 30; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -541,7 +1084,7 @@ public class MyParser implements MyParserConstants {
 	 token = new Token();
 	 jj_ntk = -1;
 	 jj_gen = 0;
-	 for (int i = 0; i < 28; i++) jj_la1[i] = -1;
+	 for (int i = 0; i < 30; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
 
@@ -610,7 +1153,7 @@ public class MyParser implements MyParserConstants {
 
 /** Get the specific Token. */
   final public Token getToken(int index) {
-	 Token t = jj_lookingAhead ? jj_scanpos : token;
+	 Token t = token;
 	 for (int i = 0; i < index; i++) {
 	   if (t.next != null) t = t.next;
 	   else t = t.next = token_source.getNextToken();
@@ -677,7 +1220,7 @@ public class MyParser implements MyParserConstants {
 	   la1tokens[jj_kind] = true;
 	   jj_kind = -1;
 	 }
-	 for (int i = 0; i < 28; i++) {
+	 for (int i = 0; i < 30; i++) {
 	   if (jj_la1[i] == jj_gen) {
 		 for (int j = 0; j < 32; j++) {
 		   if ((jj_la1_0[i] & (1<<j)) != 0) {
@@ -723,7 +1266,7 @@ public class MyParser implements MyParserConstants {
 
   private void jj_rescan_token() {
 	 jj_rescan = true;
-	 for (int i = 0; i < 3; i++) {
+	 for (int i = 0; i < 2; i++) {
 	   try {
 		 JJCalls p = jj_2_rtns[i];
 
@@ -731,9 +1274,8 @@ public class MyParser implements MyParserConstants {
 		   if (p.gen > jj_gen) {
 			 jj_la = p.arg; jj_lastpos = jj_scanpos = p.first;
 			 switch (i) {
-			   // case 0: jj_3_1(); break;
-			   // case 1: jj_3_2(); break;
-			   // case 2: jj_3_3(); break;
+			   case 0: jj_3_1(); break;
+			   case 1: jj_3_2(); break;
 			 }
 		   }
 		   p = p.next;
