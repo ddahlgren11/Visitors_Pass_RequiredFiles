@@ -70,6 +70,61 @@ public class MainTest {
         }
         """;
 
+    /**
+     * User provided complex sample with classes, loops, and object instantiation.
+     */
+    private static final String COMPLEX_SAMPLE_CLASS = """
+        class SampleClass {
+            int value;
+
+            SampleClass(int v) {
+                this.value = v;
+            }
+
+            int add(int x) {
+                return this.value + x;
+            }
+        }
+
+        class Main {
+            public static int addNumbers(int x, int y) {
+                return x + y;
+            }
+
+            public static int computeFinal(int a, int b) {
+                return a * 2 + b / 3;
+            }
+
+            public static void main() {
+                int a = 5;
+                int b = 10;
+                int c = a + b * 2;
+
+                if (c > 20) {
+                    c = c - 1;
+                } else if (c == 20) {
+                    c = c + 2;
+                } else {
+                    c = c + 3;
+                }
+
+                for (int i = 0; i < 5; i++) {
+                    c = c + i;
+                }
+
+                while (c < 50) {
+                    c = c + 1;
+                }
+
+                int result = addNumbers(a, b);
+                int finalResult = computeFinal(result, c);
+
+                SampleClass obj = new SampleClass(10);
+                int objVal = obj.add(finalResult);
+            }
+        }
+        """;
+
     private CompilerContext context;
     private CompilerOrchestrator orchestrator;
 
@@ -129,6 +184,22 @@ public class MainTest {
         //  5. Control flow corner cases
         //  6. Scope handling (variables declared inside loops or if-blocks)
         assertTrue(true, "Placeholder test — students must add their own test cases here.");
+    }
+
+    @Test
+    void testComplexSampleClass() {
+        ByteArrayInputStream input = new ByteArrayInputStream(COMPLEX_SAMPLE_CLASS.getBytes(StandardCharsets.UTF_8));
+        context.setInputStream(input);
+
+        orchestrator.addPass(new FrontEndPass());
+        orchestrator.addPass(new SymbolTableBuilderPass());
+        orchestrator.addPass(new TypeCheckingPass());
+
+        assertDoesNotThrow(() -> orchestrator.runPasses(context),
+                "Compiler passes should execute without throwing exceptions for complex class sample.");
+
+        assertFalse(context.getDiagnostics().hasErrors(),
+                "Complex class sample should parse and compile without errors. Errors: " + context.getDiagnostics().getErrors());
     }
 
     /**

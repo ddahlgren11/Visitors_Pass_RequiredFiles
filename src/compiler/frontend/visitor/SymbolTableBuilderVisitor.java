@@ -74,6 +74,7 @@ public class SymbolTableBuilderVisitor implements ASTVisitor {
 
     @Override
     public void visitIdentifierNode(IdentifierNode node) {
+        if (node.getName().equals("this")) return;
         if (!table.lookup(node.getName()).isPresent()) {
             diag.addError("Use of undeclared variable: " + node.getName());
         }
@@ -125,5 +126,43 @@ public class SymbolTableBuilderVisitor implements ASTVisitor {
     @Override
     public void visitEmptyNode(EmptyNode emptyNode) {
         // Do nothing
+    }
+
+    @Override
+    public void visitClassDeclNode(ClassDeclNode node) {
+        Symbol sym = new Symbol(node.className, Kind.TYPE, node);
+        if (!table.declare(sym)) {
+            diag.addError("Duplicate declaration: " + node.className);
+        }
+        table.enterScope();
+        for (VarDeclNode field : node.fields) {
+            field.accept(this);
+        }
+        for (FunctionDeclNode method : node.methods) {
+            method.accept(this);
+        }
+        table.exitScope();
+    }
+
+    @Override
+    public void visitNewExprNode(NewExprNode node) {
+        for (ASTNode arg : node.args) {
+            arg.accept(this);
+        }
+    }
+
+    @Override
+    public void visitMethodCallNode(MethodCallNode node) {
+        if (node.object != null) {
+            node.object.accept(this);
+        }
+        for (ASTNode arg : node.args) {
+            arg.accept(this);
+        }
+    }
+
+    @Override
+    public void visitMemberAccessNode(MemberAccessNode node) {
+        node.object.accept(this);
     }
 }

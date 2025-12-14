@@ -4,5 +4,5 @@ package compiler.middle;
  * Defines the type of symbol being tracked.
  */
 public enum Kind {
-    VARIABLE, FUNCTION, PARAMETER, CONSTANT // added constant
+    VARIABLE, FUNCTION, PARAMETER, CONSTANT, TYPE // added constant
 }
