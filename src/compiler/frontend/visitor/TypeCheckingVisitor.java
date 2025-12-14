@@ -103,4 +103,9 @@ public class TypeCheckingVisitor implements ASTVisitor {
     public void visitUnaryOpNode(UnaryOpNode node) {
         node.expr.accept(this);
     }
+
+    @Override
+    public void visitEmptyNode(EmptyNode emptyNode) {
+        // Do nothing
+    }   
 }

@@ -130,4 +130,10 @@ public class TACConversionPass implements ASTVisitor {
         // TODO Auto-generated method stub
         lastResult = null;
     }
+
+    @Override
+    public void visitEmptyNode(compiler.frontend.ast.EmptyNode emptyNode) {
+        // TODO Auto-generated method stub
+        lastResult = null;
+    }
 }

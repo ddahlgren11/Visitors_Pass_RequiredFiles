@@ -24,11 +24,12 @@ public class MyParser {
             System.err.println("PARSE ERROR: " + e.getMessage());
         }
     }
-
-    public MyParser(java.io.Reader reader) {
-        this(new SimpleCharStream(reader, 1, 1));
+        /*public MyParser(java.io.Reader reader) {
+            this(new SimpleCharStream(reader, 1, 1));
+        }
+        */
     }
-}
+
 
 PARSER_END(MyParser)
 
@@ -119,7 +120,7 @@ ASTNode Statement() :
 // Return
 ASTNode ReturnStmt() :
 {
-    ASTNode expr = null;
+    ExpressionNode expr = null;
 }
 {
     <RETURN> (expr=Expression())? <SEMI>
@@ -131,7 +132,7 @@ ASTNode ReturnStmt() :
 // Declaration
 ASTNode VarDecl() :
 {
-    Token t; Token id; ASTNode expr = null;
+    Token t; Token id; ExpressionNode expr = null;
 }
 {
     (t=<INT> | t=<IDENTIFIER>) id=<IDENTIFIER> ( <ASSIGN> expr=Expression() )? <SEMI>
@@ -141,9 +142,9 @@ ASTNode VarDecl() :
 }
 
 // Assignment
-ASTNode Assignment() :
+AssignmentNode Assignment() :
 {
-    Token id; ASTNode expr;
+    Token id; ExpressionNode expr;
 }
 {
     id=<IDENTIFIER> <ASSIGN> expr=Expression() <SEMI>
@@ -163,11 +164,11 @@ ASTNode ExprStmt() :
 }
 
 // ---------- Expressions ----------
-ASTNode Expression() : { ASTNode n; } { n=LogicalOr() { return n; } }
+ExpressionNode Expression() : { ExpressionNode n; } { n=LogicalOr() { return n; } }
 
-ASTNode LogicalOr() :
+ExpressionNode LogicalOr() :
 {
-    ASTNode left, right; Token op;
+    ExpressionNode left, right; Token op;
 }
 {
     left=LogicalAnd() ( op=<OR> right=LogicalAnd()
@@ -176,9 +177,9 @@ ASTNode LogicalOr() :
     { return left; }
 }
 
-ASTNode LogicalAnd() :
+ExpressionNode LogicalAnd() :
 {
-    ASTNode left, right; Token op;
+    ExpressionNode left, right; Token op;
 }
 {
     left=Equality() ( op=<AND> right=Equality()
@@ -187,9 +188,9 @@ ASTNode LogicalAnd() :
     { return left; }
 }
 
-ASTNode Equality() :
+ExpressionNode Equality() :
 {
-    ASTNode left, right; Token op;
+    ExpressionNode left, right; Token op;
 }
 {
     left=Relational() 
@@ -199,9 +200,9 @@ ASTNode Equality() :
     { return left; }
 }
 
-ASTNode Relational() :
+ExpressionNode Relational() :
 {
-    ASTNode left, right; Token op;
+    ExpressionNode left, right; Token op;
 }
 {
     left = Additive() 
@@ -211,9 +212,9 @@ ASTNode Relational() :
     { return left; }
 }
 
-ASTNode Additive() :
+ExpressionNode Additive() :
 {
-    ASTNode left, right; Token op;
+    ExpressionNode left, right; Token op;
 }
 {
     left = Term()
@@ -223,9 +224,9 @@ ASTNode Additive() :
     { return left; }
 }
 
-ASTNode Term() :
+ExpressionNode Term() :
 {
-    ASTNode left, right; Token op;
+    ExpressionNode left, right; Token op;
 }
 {
     left = Factor()
@@ -235,9 +236,9 @@ ASTNode Term() :
     { return left; }
 }
 
-ASTNode Factor() :
+ExpressionNode Factor() :
 {
-    Token t; ASTNode e;
+    Token t; ExpressionNode e;
 }
 {
       t=<INT_LITERAL>     { return new LiteralNode(t.image); }
@@ -257,11 +258,11 @@ ASTNode Factor() :
 // ---------- Control Structures ----------
 ASTNode IfStmt() :
 {
-    ASTNode cond, thenBlock, elseBlock=null;
+    ExpressionNode cond; BlockNode thenBlock, elseBlock=null;
 }
 {
-    <IF> <LPAREN> cond=Expression() <RPAREN> thenBlock=Statement()
-    ( <ELSE> elseBlock=Statement() )?
+    <IF> <LPAREN> cond=Expression() <RPAREN> thenBlock=Block()
+    ( <ELSE> elseBlock=Block() )?
     {
         return new IfNode(cond, thenBlock, elseBlock);
     }
@@ -269,19 +270,19 @@ ASTNode IfStmt() :
 
 ASTNode WhileStmt() :
 {
-    ASTNode cond, body;
+    ExpressionNode cond; BlockNode body;
 }
 {
-    <WHILE> <LPAREN> cond=Expression() <RPAREN> body=Statement()
+    <WHILE> <LPAREN> cond=Expression() <RPAREN> body=Block()
     {
         return new WhileNode(cond, body);
     }
 }
 
 // Productions for for-loop
-ASTNode VarDeclForLoop() :
+VarDeclNode VarDeclForLoop() :
 {
-    Token t; Token id; ASTNode expr = null;
+    Token t; Token id; ExpressionNode expr = null;
 }
 {
     (t=<INT> | t=<IDENTIFIER>) id=<IDENTIFIER> ( <ASSIGN> expr=Expression() )?
@@ -290,9 +291,9 @@ ASTNode VarDeclForLoop() :
     }
 }
 
-ASTNode AssignmentForLoop() :
+AssignmentNode AssignmentForLoop() :
 {
-    Token id; ASTNode expr;
+    Token id; ExpressionNode expr;
 }
 {
     id=<IDENTIFIER> <ASSIGN> expr=Expression()
@@ -303,20 +304,31 @@ ASTNode AssignmentForLoop() :
 
 ASTNode ForStmt() :
 {
-    ASTNode init=null, cond=null, update=null, body;
+    ExpressionNode cond=null, update=null; BlockNode body; VarDeclNode vardeclinit=null; AssignmentNode assignmentinit=null;
 }
 {
     <FOR> <LPAREN>
-        [ init=VarDeclForLoop() | init=AssignmentForLoop() ] <SEMI>
+        [  assignmentinit=AssignmentForLoop() ] <SEMI>
         [ cond=Expression() ] <SEMI>
         [ update=Expression() ] <RPAREN>
-        body=Statement()
+        body=Block()
     {
-        return new ForNode(init, cond, update, body);
+        ForNode returnMe =null;
+        if (vardeclinit != null) {
+            returnMe = new ForNode(vardeclinit, cond, update, body);
+        }
+        else if (assignmentinit != null) {
+            returnMe = new ForNode(assignmentinit, cond, update, body);
+        }
+        if (returnMe == null) {
+            throw new RuntimeException("Something weird happened");
+        }
+
+        return returnMe;
     }
 }
 
-ASTNode Block() :
+BlockNode Block() :
 {
     List<ASTNode> stmts = new ArrayList<>(); ASTNode s;
 }
@@ -329,7 +341,7 @@ ASTNode Block() :
 
 ASTNode FunctionDecl() :
 {
-    Token t; Token id; List<VarDeclNode> params = new ArrayList<>(); ASTNode body;
+    Token t; Token id; List<VarDeclNode> params = new ArrayList<>(); BlockNode body;
 }
 {
     (t=<VOID> | t=<INT> | t=<IDENTIFIER>) id=<IDENTIFIER>

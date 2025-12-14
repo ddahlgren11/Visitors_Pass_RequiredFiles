@@ -33,55 +33,63 @@ public interface MyParserConstants {
   /** RegularExpression Id. */
   int NEW = 17;
   /** RegularExpression Id. */
-  int INT_LITERAL = 18;
+  int CLASS = 18;
   /** RegularExpression Id. */
-  int STRING_LITERAL = 19;
+  int PUBLIC = 19;
   /** RegularExpression Id. */
-  int EQ = 20;
+  int STATIC = 20;
   /** RegularExpression Id. */
-  int ASSIGN = 21;
+  int THIS = 21;
   /** RegularExpression Id. */
-  int INCR = 22;
+  int INT_LITERAL = 22;
   /** RegularExpression Id. */
-  int DECR = 23;
+  int STRING_LITERAL = 23;
   /** RegularExpression Id. */
-  int PLUS = 24;
+  int EQ = 24;
   /** RegularExpression Id. */
-  int MINUS = 25;
+  int ASSIGN = 25;
   /** RegularExpression Id. */
-  int MULT = 26;
+  int INCR = 26;
   /** RegularExpression Id. */
-  int DIV = 27;
+  int DECR = 27;
   /** RegularExpression Id. */
-  int LT = 28;
+  int PLUS = 28;
   /** RegularExpression Id. */
-  int GT = 29;
+  int MINUS = 29;
   /** RegularExpression Id. */
-  int NEQ = 30;
+  int MULT = 30;
   /** RegularExpression Id. */
-  int AND = 31;
+  int DIV = 31;
   /** RegularExpression Id. */
-  int OR = 32;
+  int LT = 32;
   /** RegularExpression Id. */
-  int DOT = 33;
+  int GT = 33;
   /** RegularExpression Id. */
-  int LPAREN = 34;
+  int NEQ = 34;
   /** RegularExpression Id. */
-  int RPAREN = 35;
+  int AND = 35;
   /** RegularExpression Id. */
-  int LBRACE = 36;
+  int OR = 36;
   /** RegularExpression Id. */
-  int RBRACE = 37;
+  int DOT = 37;
   /** RegularExpression Id. */
-  int SEMI = 38;
+  int LPAREN = 38;
   /** RegularExpression Id. */
-  int COMMA = 39;
+  int RPAREN = 39;
   /** RegularExpression Id. */
-  int IDENTIFIER = 40;
+  int LBRACE = 40;
   /** RegularExpression Id. */
-  int LETTER = 41;
+  int RBRACE = 41;
   /** RegularExpression Id. */
-  int DIGIT = 42;
+  int SEMI = 42;
+  /** RegularExpression Id. */
+  int COMMA = 43;
+  /** RegularExpression Id. */
+  int IDENTIFIER = 44;
+  /** RegularExpression Id. */
+  int LETTER = 45;
+  /** RegularExpression Id. */
+  int DIGIT = 46;
 
   /** Lexical state. */
   int DEFAULT = 0;
@@ -106,6 +114,10 @@ public interface MyParserConstants {
     "\"false\"",
     "\"null\"",
     "\"new\"",
+    "\"class\"",
+    "\"public\"",
+    "\"static\"",
+    "\"this\"",
     "<INT_LITERAL>",
     "<STRING_LITERAL>",
     "\"==\"",
