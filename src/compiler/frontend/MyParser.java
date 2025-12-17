@@ -20,104 +20,64 @@ public class MyParser implements MyParserConstants {
         }
     }
 
-// ---------- Program ----------
-  final public ASTNode Program() throws ParseException {List<ASTNode> stmts = new ArrayList<>();
-    ASTNode s;
-    label_1:
-    while (true) {
-      switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-      case IF:
-      case WHILE:
-      case FOR:
-      case VOID:
-      case RETURN:
-      case INT:
-      case TRUE:
-      case FALSE:
-      case NULL:
-      case INT_LITERAL:
-      case STRING_LITERAL:
-      case LPAREN:
-      case LBRACE:
-      case SEMI:
-      case IDENTIFIER:{
-        ;
-        break;
+    // ---------- Program ----------
+    final public ASTNode Program() throws ParseException {
+        List<ASTNode> stmts = new ArrayList<>();
+        while (getToken(1).kind != EOF) {
+            // Skip empty statements or handle them if needed, but here we expect valid statements or declarations
+            if (getToken(1).kind == CLASS) {
+                stmts.add(ClassDecl());
+            } else {
+                stmts.add(Statement());
+            }
         }
-      default:
-        jj_la1[0] = jj_gen;
-        break label_1;
-      }
-      s = Statement();
-stmts.add(s);
+        jj_consume_token(EOF);
+        return new BlockNode(stmts);
     }
-    jj_consume_token(0);
-{if ("" != null) return new BlockNode(stmts);}
-    throw new Error("Missing return statement in function");
-}
 
-// ---------- Statements ----------
-  final public ASTNode Statement() throws ParseException {ASTNode n;
-    if (jj_2_1(2147483647)) {
-      n = VarDecl();
-{if ("" != null) return n;}
-    } else if (jj_2_2(2147483647)) {
-      n = Assignment();
-{if ("" != null) return n;}
-    } else {
-      switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-      case IF:{
-        n = IfStmt();
-{if ("" != null) return n;}
-        break;
+    // ---------- Statements ----------
+    final public ASTNode Statement() throws ParseException {
+        switch (getToken(1).kind) {
+            case LBRACE:
+                return Block();
+            case IF:
+                return IfStmt();
+            case WHILE:
+                return WhileStmt();
+            case FOR:
+                return ForStmt();
+            case RETURN:
+                return ReturnStmt();
+            case INT: // Variable declaration starting with type 'int'
+                return VarDecl();
+            case IDENTIFIER:
+                // Could be VarDecl (Type ID ...), FunctionDecl (Type ID( ...), Assignment (ID = ...), Call (ID( ...), or just an ID expression
+                // Lookahead to disambiguate
+                Token t1 = getToken(1); // Type or ID
+                Token t2 = getToken(2);
+                Token t3 = getToken(3);
+
+                if (t2.kind == IDENTIFIER) {
+                    // Type Identifier ... -> Decl
+                     if (t3.kind == LPAREN) return FunctionDecl();
+                     return VarDecl();
+                }
+
+                // If t2 is ASSIGN, it's assignment: ID = ...
+                if (t2.kind == ASSIGN) {
+                    return Assignment();
+                }
+
+                // Otherwise expression statement
+                return ExprStmt();
+            case VOID:
+                return FunctionDecl();
+            case SEMI:
+                jj_consume_token(SEMI);
+                return new EmptyNode();
+            default:
+                return ExprStmt();
         }
-      case WHILE:{
-        n = WhileStmt();
-{if ("" != null) return n;}
-        break;
-        }
-      case FOR:{
-        n = ForStmt();
-{if ("" != null) return n;}
-        break;
-        }
-      case LBRACE:{
-        n = Block();
-{if ("" != null) return n;}
-        break;
-        }
-      case VOID:
-      case INT:
-      case IDENTIFIER:{
-        n = FunctionDecl();
-{if ("" != null) return n;}
-        break;
-        }
-      case RETURN:{
-        n = ReturnStmt();
-{if ("" != null) return n;}
-        break;
-        }
-      case TRUE:
-      case FALSE:
-      case NULL:
-      case INT_LITERAL:
-      case STRING_LITERAL:
-      case LPAREN:{
-        n = ExprStmt();
-{if ("" != null) return n;}
-        break;
-        }
-      case SEMI:{
-        jj_consume_token(SEMI);
-{if ("" != null) return new EmptyNode();}
-        break;
-        }
-      default:
-        jj_la1[1] = jj_gen;
-        jj_consume_token(-1);
-        throw new ParseException();
-      }
     }
     throw new Error("Missing return statement in function");
 }
@@ -384,200 +344,48 @@ left = new BinaryOpNode(op.image, left, right);
     throw new Error("Missing return statement in function");
 }
 
-  final public ExpressionNode Factor() throws ParseException {Token t; ExpressionNode e;
-    ExpressionNode result;
-    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-    case INT_LITERAL:{
-      t = jj_consume_token(INT_LITERAL);
-{if ("" != null) return new LiteralNode(t.image);}
-      break;
-      }
-    case STRING_LITERAL:{
-      t = jj_consume_token(STRING_LITERAL);
-{if ("" != null) return new LiteralNode(t.image);}
-      break;
-      }
-    case TRUE:{
-      t = jj_consume_token(TRUE);
-{if ("" != null) return new LiteralNode("true");}
-      break;
-      }
-    case FALSE:{
-      t = jj_consume_token(FALSE);
-{if ("" != null) return new LiteralNode("false");}
-      break;
-      }
-    case NULL:{
-      t = jj_consume_token(NULL);
-{if ("" != null) return new LiteralNode("null");}
-      break;
-      }
-    case IDENTIFIER:{
-      t = jj_consume_token(IDENTIFIER);
-// default: just the identifier
-          result = new IdentifierNode(t.image);
-      switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-      case INCR:
-      case DECR:{
-        switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-        case INCR:{
-          jj_consume_token(INCR);
-result = new UnaryOpNode("post++", new IdentifierNode(t.image));
-          break;
-          }
-        case DECR:{
-          jj_consume_token(DECR);
-result = new UnaryOpNode("post--", new IdentifierNode(t.image));
-          break;
-          }
-        default:
-          jj_la1[15] = jj_gen;
-          jj_consume_token(-1);
-          throw new ParseException();
+    final public ExpressionNode Relational() throws ParseException {
+        ExpressionNode left = Additive();
+        while (getToken(1).kind == LT || getToken(1).kind == GT /* || getToken(1).kind == LTE || getToken(1).kind == GTE */) {
+            Token op = jj_consume_token(getToken(1).kind);
+            ExpressionNode right = Additive();
+            left = new BinaryOpNode(op.image, left, right);
         }
-        break;
+        return left;
+    }
+    throw new Error("Missing return statement in function");
+}
+
+    final public ExpressionNode Additive() throws ParseException {
+        ExpressionNode left = Multiplicative();
+        while (getToken(1).kind == PLUS || getToken(1).kind == MINUS) {
+            Token op = jj_consume_token(getToken(1).kind);
+            ExpressionNode right = Multiplicative();
+            left = new BinaryOpNode(op.image, left, right);
         }
-      default:
-        jj_la1[16] = jj_gen;
-        ;
-      }
-{if ("" != null) return result;}
-      break;
-      }
-    case LPAREN:{
-      jj_consume_token(LPAREN);
-      e = Expression();
-      jj_consume_token(RPAREN);
-{if ("" != null) return e;}
-      break;
-      }
-    default:
-      jj_la1[17] = jj_gen;
-      jj_consume_token(-1);
-      throw new ParseException();
+        return left;
     }
-    throw new Error("Missing return statement in function");
-}
 
-// ---------- Control Structures ----------
-  final public ASTNode IfStmt() throws ParseException {ExpressionNode cond; BlockNode thenBlock, elseBlock=null;
-    jj_consume_token(IF);
-    jj_consume_token(LPAREN);
-    cond = Expression();
-    jj_consume_token(RPAREN);
-    thenBlock = Block();
-    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-    case ELSE:{
-      jj_consume_token(ELSE);
-      elseBlock = Block();
-      break;
-      }
-    default:
-      jj_la1[18] = jj_gen;
-      ;
+    final public ExpressionNode Multiplicative() throws ParseException {
+        ExpressionNode left = Unary();
+        while (getToken(1).kind == MULT || getToken(1).kind == DIV) {
+            Token op = jj_consume_token(getToken(1).kind);
+            ExpressionNode right = Unary();
+            left = new BinaryOpNode(op.image, left, right);
+        }
+        return left;
     }
-{if ("" != null) return new IfNode(cond, thenBlock, elseBlock);}
-    throw new Error("Missing return statement in function");
-}
 
-  final public ASTNode WhileStmt() throws ParseException {ExpressionNode cond; BlockNode body;
-    jj_consume_token(WHILE);
-    jj_consume_token(LPAREN);
-    cond = Expression();
-    jj_consume_token(RPAREN);
-    body = Block();
-{if ("" != null) return new WhileNode(cond, body);}
-    throw new Error("Missing return statement in function");
-}
-
-// Productions for for-loop
-  final public VarDeclNode VarDeclForLoop() throws ParseException {Token t; Token id; ExpressionNode expr = null;
-    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-    case INT:{
-      t = jj_consume_token(INT);
-      break;
-      }
-    case IDENTIFIER:{
-      t = jj_consume_token(IDENTIFIER);
-      break;
-      }
-    default:
-      jj_la1[19] = jj_gen;
-      jj_consume_token(-1);
-      throw new ParseException();
-    }
-    id = jj_consume_token(IDENTIFIER);
-    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-    case ASSIGN:{
-      jj_consume_token(ASSIGN);
-      expr = Expression();
-      break;
-      }
-    default:
-      jj_la1[20] = jj_gen;
-      ;
-    }
-{if ("" != null) return new VarDeclNode(t.image, id.image, expr);}
-    throw new Error("Missing return statement in function");
-}
-
-  final public AssignmentNode AssignmentForLoop() throws ParseException {Token id; ExpressionNode expr;
-    id = jj_consume_token(IDENTIFIER);
-    jj_consume_token(ASSIGN);
-    expr = Expression();
-{if ("" != null) return new AssignmentNode(new IdentifierNode(id.image), expr);}
-    throw new Error("Missing return statement in function");
-}
-
-  final public ASTNode ForStmt() throws ParseException {ExpressionNode cond=null, update=null; BlockNode body; VarDeclNode vardeclinit=null; AssignmentNode assignmentinit=null;
-    jj_consume_token(FOR);
-    jj_consume_token(LPAREN);
-    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-    case IDENTIFIER:{
-      assignmentinit = AssignmentForLoop();
-      break;
-      }
-    default:
-      jj_la1[21] = jj_gen;
-      ;
-    }
-    jj_consume_token(SEMI);
-    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-    case TRUE:
-    case FALSE:
-    case NULL:
-    case INT_LITERAL:
-    case STRING_LITERAL:
-    case LPAREN:
-    case IDENTIFIER:{
-      cond = Expression();
-      break;
-      }
-    default:
-      jj_la1[22] = jj_gen;
-      ;
-    }
-    jj_consume_token(SEMI);
-    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-    case TRUE:
-    case FALSE:
-    case NULL:
-    case INT_LITERAL:
-    case STRING_LITERAL:
-    case LPAREN:
-    case IDENTIFIER:{
-      update = Expression();
-      break;
-      }
-    default:
-      jj_la1[23] = jj_gen;
-      ;
-    }
-    jj_consume_token(RPAREN);
-    body = Block();
-ForNode returnMe =null;
-        if (vardeclinit != null) {
-            returnMe = new ForNode(vardeclinit, cond, update, body);
+    final public ExpressionNode Unary() throws ParseException {
+        if (getToken(1).kind == MINUS || getToken(1).kind == PLUS) { // Unary minus/plus
+             Token op = jj_consume_token(getToken(1).kind);
+             ExpressionNode e = Unary(); // Right associative or just Factor? Usually Unary.
+             // But for - - 5 it should work.
+             // UnaryOpNode might expect "negate" or similar? Or just "-"
+             // The AST expects "negate"? Or just the operator string?
+             // Checking AST usage: `new UnaryOpNode("post++", ...)`
+             // I'll use the operator string.
+             return new UnaryOpNode(op.image, e);
         }
         else if (assignmentinit != null) {
             returnMe = new ForNode(assignmentinit, cond, update, body);
@@ -981,33 +789,15 @@ params.add(new VarDeclNode(t.image, id.image, null));
       xsp = jj_scanpos;
       if (jj_3R_LogicalAnd_185_23_18()) { jj_scanpos = xsp; break; }
     }
-    return false;
-  }
 
-  private boolean jj_3R_Term_232_5_23()
- {
-    if (jj_3R_Factor_245_7_25()) return true;
-    Token xsp;
-    while (true) {
-      xsp = jj_scanpos;
-      if (jj_3R_Term_233_7_26()) { jj_scanpos = xsp; break; }
-    }
-    return false;
-  }
 
-  private boolean jj_3R_VarDecl_138_50_12()
- {
-    if (jj_scan_token(ASSIGN)) return true;
-    if (jj_3R_Expression_167_55_13()) return true;
-    return false;
-  }
+  // =========================================================================
+  // Generated Token Manager Infrastructure (Do Not Modify)
+  // =========================================================================
 
-  /** Generated Token Manager. */
   public MyParserTokenManager token_source;
   SimpleCharStream jj_input_stream;
-  /** Current token. */
   public Token token;
-  /** Next token. */
   public Token jj_nt;
   private int jj_ntk;
   private Token jj_scanpos, jj_lastpos;
@@ -1030,11 +820,9 @@ params.add(new VarDeclNode(t.image, id.image, null));
   private boolean jj_rescan = false;
   private int jj_gc = 0;
 
-  /** Constructor with InputStream. */
   public MyParser(java.io.InputStream stream) {
 	  this(stream, null);
   }
-  /** Constructor with InputStream and supplied encoding */
   public MyParser(java.io.InputStream stream, String encoding) {
 	 try { jj_input_stream = new SimpleCharStream(stream, encoding, 1, 1); } catch(java.io.UnsupportedEncodingException e) { throw new RuntimeException(e); }
 	 token_source = new MyParserTokenManager(jj_input_stream);
@@ -1044,12 +832,9 @@ params.add(new VarDeclNode(t.image, id.image, null));
 	 for (int i = 0; i < 30; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
-
-  /** Reinitialise. */
   public void ReInit(java.io.InputStream stream) {
 	  ReInit(stream, null);
   }
-  /** Reinitialise. */
   public void ReInit(java.io.InputStream stream, String encoding) {
 	 try { jj_input_stream.ReInit(stream, encoding, 1, 1); } catch(java.io.UnsupportedEncodingException e) { throw new RuntimeException(e); }
 	 token_source.ReInit(jj_input_stream);
@@ -1059,8 +844,6 @@ params.add(new VarDeclNode(t.image, id.image, null));
 	 for (int i = 0; i < 30; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
-
-  /** Constructor. */
   public MyParser(java.io.Reader stream) {
 	 jj_input_stream = new SimpleCharStream(stream, 1, 1);
 	 token_source = new MyParserTokenManager(jj_input_stream);
@@ -1070,8 +853,6 @@ params.add(new VarDeclNode(t.image, id.image, null));
 	 for (int i = 0; i < 30; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
-
-  /** Reinitialise. */
   public void ReInit(java.io.Reader stream) {
 	if (jj_input_stream == null) {
 	   jj_input_stream = new SimpleCharStream(stream, 1, 1);
@@ -1081,7 +862,6 @@ params.add(new VarDeclNode(t.image, id.image, null));
 	if (token_source == null) {
  token_source = new MyParserTokenManager(jj_input_stream);
 	}
-
 	 token_source.ReInit(jj_input_stream);
 	 token = new Token();
 	 jj_ntk = -1;
@@ -1089,8 +869,6 @@ params.add(new VarDeclNode(t.image, id.image, null));
 	 for (int i = 0; i < 30; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
-
-  /** Constructor with generated Token Manager. */
   public MyParser(MyParserTokenManager tm) {
 	 token_source = tm;
 	 token = new Token();
@@ -1099,8 +877,6 @@ params.add(new VarDeclNode(t.image, id.image, null));
 	 for (int i = 0; i < 30; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
-
-  /** Reinitialise. */
   public void ReInit(MyParserTokenManager tm) {
 	 token_source = tm;
 	 token = new Token();
@@ -1109,7 +885,6 @@ params.add(new VarDeclNode(t.image, id.image, null));
 	 for (int i = 0; i < 30; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
-
   private Token jj_consume_token(int kind) throws ParseException {
 	 Token oldToken;
 	 if ((oldToken = token).next != null) token = token.next;
@@ -1133,7 +908,6 @@ params.add(new VarDeclNode(t.image, id.image, null));
 	 jj_kind = kind;
 	 throw generateParseException();
   }
-
   @SuppressWarnings("serial")
   static private final class LookaheadSuccess extends java.lang.Error {
     @Override
@@ -1162,9 +936,6 @@ params.add(new VarDeclNode(t.image, id.image, null));
 	 if (jj_la == 0 && jj_scanpos == jj_lastpos) throw jj_ls;
 	 return false;
   }
-
-
-/** Get the next Token. */
   final public Token getNextToken() {
 	 if (token.next != null) token = token.next;
 	 else token = token.next = token_source.getNextToken();
@@ -1172,8 +943,6 @@ params.add(new VarDeclNode(t.image, id.image, null));
 	 jj_gen++;
 	 return token;
   }
-
-/** Get the specific Token. */
   final public Token getToken(int index) {
 	 Token t = token;
 	 for (int i = 0; i < index; i++) {
@@ -1182,44 +951,36 @@ params.add(new VarDeclNode(t.image, id.image, null));
 	 }
 	 return t;
   }
-
   private int jj_ntk_f() {
 	 if ((jj_nt=token.next) == null)
 	   return (jj_ntk = (token.next=token_source.getNextToken()).kind);
 	 else
 	   return (jj_ntk = jj_nt.kind);
   }
-
   private java.util.List<int[]> jj_expentries = new java.util.ArrayList<int[]>();
   private int[] jj_expentry;
   private int jj_kind = -1;
   private int[] jj_lasttokens = new int[100];
   private int jj_endpos;
-
   private void jj_add_error_token(int kind, int pos) {
 	 if (pos >= 100) {
 		return;
 	 }
-
 	 if (pos == jj_endpos + 1) {
 	   jj_lasttokens[jj_endpos++] = kind;
 	 } else if (jj_endpos != 0) {
 	   jj_expentry = new int[jj_endpos];
-
 	   for (int i = 0; i < jj_endpos; i++) {
 		 jj_expentry[i] = jj_lasttokens[i];
 	   }
-
 	   for (int[] oldentry : jj_expentries) {
 		 if (oldentry.length == jj_expentry.length) {
 		   boolean isMatched = true;
-
 		   for (int i = 0; i < jj_expentry.length; i++) {
 			 if (oldentry[i] != jj_expentry[i]) {
 			   isMatched = false;
 			   break;
 			 }
-
 		   }
 		   if (isMatched) {
 			 jj_expentries.add(jj_expentry);
@@ -1227,14 +988,11 @@ params.add(new VarDeclNode(t.image, id.image, null));
 		   }
 		 }
 	   }
-
 	   if (pos != 0) {
 		 jj_lasttokens[(jj_endpos = pos) - 1] = kind;
 	   }
 	 }
   }
-
-  /** Generate ParseException. */
   public ParseException generateParseException() {
 	 jj_expentries.clear();
 	 boolean[] la1tokens = new boolean[47];
@@ -1270,56 +1028,43 @@ params.add(new VarDeclNode(t.image, id.image, null));
 	 }
 	 return new ParseException(token, exptokseq, tokenImage);
   }
-
   private boolean trace_enabled;
-
-/** Trace enabled. */
   final public boolean trace_enabled() {
 	 return trace_enabled;
   }
-
-  /** Enable tracing. */
   final public void enable_tracing() {
   }
-
-  /** Disable tracing. */
   final public void disable_tracing() {
   }
-
   private void jj_rescan_token() {
 	 jj_rescan = true;
 	 for (int i = 0; i < 2; i++) {
 	   try {
 		 JJCalls p = jj_2_rtns[i];
-
 		 do {
 		   if (p.gen > jj_gen) {
 			 jj_la = p.arg; jj_lastpos = jj_scanpos = p.first;
 			 switch (i) {
-			   case 0: jj_3_1(); break;
-			   case 1: jj_3_2(); break;
+			   case 0: break;
+			   case 1: break;
 			 }
 		   }
 		   p = p.next;
 		 } while (p != null);
-
 		 } catch(LookaheadSuccess ls) { }
 	 }
 	 jj_rescan = false;
   }
-
   private void jj_save(int index, int xla) {
 	 JJCalls p = jj_2_rtns[index];
 	 while (p.gen > jj_gen) {
 	   if (p.next == null) { p = p.next = new JJCalls(); break; }
 	   p = p.next;
 	 }
-
 	 p.gen = jj_gen + xla - jj_la; 
 	 p.first = token;
 	 p.arg = xla;
   }
-
   static final class JJCalls {
 	 int gen;
 	 Token first;
