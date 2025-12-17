@@ -17,104 +17,64 @@ public class MyParser implements MyParserConstants {
         }
     }
 
-// ---------- Program ----------
-  final public ASTNode Program() throws ParseException {List<ASTNode> stmts = new ArrayList<>();
-    ASTNode s;
-    label_1:
-    while (true) {
-      switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-      case IF:
-      case WHILE:
-      case FOR:
-      case VOID:
-      case RETURN:
-      case INT:
-      case TRUE:
-      case FALSE:
-      case NULL:
-      case INT_LITERAL:
-      case STRING_LITERAL:
-      case LPAREN:
-      case LBRACE:
-      case SEMI:
-      case IDENTIFIER:{
-        ;
-        break;
+    // ---------- Program ----------
+    final public ASTNode Program() throws ParseException {
+        List<ASTNode> stmts = new ArrayList<>();
+        while (getToken(1).kind != EOF) {
+            // Skip empty statements or handle them if needed, but here we expect valid statements or declarations
+            if (getToken(1).kind == CLASS) {
+                stmts.add(ClassDecl());
+            } else {
+                stmts.add(Statement());
+            }
         }
-      default:
-        jj_la1[0] = jj_gen;
-        break label_1;
-      }
-      s = Statement();
-stmts.add(s);
+        jj_consume_token(EOF);
+        return new BlockNode(stmts);
     }
-    jj_consume_token(0);
-{if ("" != null) return new BlockNode(stmts);}
-    throw new Error("Missing return statement in function");
-}
 
-// ---------- Statements ----------
-  final public ASTNode Statement() throws ParseException {ASTNode n;
-    if (jj_2_1(2147483647)) {
-      n = VarDecl();
-{if ("" != null) return n;}
-    } else if (jj_2_2(2147483647)) {
-      n = Assignment();
-{if ("" != null) return n;}
-    } else {
-      switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-      case IF:{
-        n = IfStmt();
-{if ("" != null) return n;}
-        break;
+    // ---------- Statements ----------
+    final public ASTNode Statement() throws ParseException {
+        switch (getToken(1).kind) {
+            case LBRACE:
+                return Block();
+            case IF:
+                return IfStmt();
+            case WHILE:
+                return WhileStmt();
+            case FOR:
+                return ForStmt();
+            case RETURN:
+                return ReturnStmt();
+            case INT: // Variable declaration starting with type 'int'
+                return VarDecl();
+            case IDENTIFIER:
+                // Could be VarDecl (Type ID ...), FunctionDecl (Type ID( ...), Assignment (ID = ...), Call (ID( ...), or just an ID expression
+                // Lookahead to disambiguate
+                Token t1 = getToken(1); // Type or ID
+                Token t2 = getToken(2);
+                Token t3 = getToken(3);
+
+                if (t2.kind == IDENTIFIER) {
+                    // Type Identifier ... -> Decl
+                     if (t3.kind == LPAREN) return FunctionDecl();
+                     return VarDecl();
+                }
+
+                // If t2 is ASSIGN, it's assignment: ID = ...
+                if (t2.kind == ASSIGN) {
+                    return Assignment();
+                }
+
+                // Otherwise expression statement
+                return ExprStmt();
+            case VOID:
+                return FunctionDecl();
+            case SEMI:
+                jj_consume_token(SEMI);
+                return new EmptyNode();
+            default:
+                return ExprStmt();
         }
-      case WHILE:{
-        n = WhileStmt();
-{if ("" != null) return n;}
-        break;
-        }
-      case FOR:{
-        n = ForStmt();
-{if ("" != null) return n;}
-        break;
-        }
-      case LBRACE:{
-        n = Block();
-{if ("" != null) return n;}
-        break;
-        }
-      case VOID:
-      case INT:
-      case IDENTIFIER:{
-        n = FunctionDecl();
-{if ("" != null) return n;}
-        break;
-        }
-      case RETURN:{
-        n = ReturnStmt();
-{if ("" != null) return n;}
-        break;
-        }
-      case TRUE:
-      case FALSE:
-      case NULL:
-      case INT_LITERAL:
-      case STRING_LITERAL:
-      case LPAREN:{
-        n = ExprStmt();
-{if ("" != null) return n;}
-        break;
-        }
-      case SEMI:{
-        jj_consume_token(SEMI);
-{if ("" != null) return new EmptyNode();}
-        break;
-        }
-      default:
-        jj_la1[1] = jj_gen;
-        jj_consume_token(-1);
-        throw new ParseException();
-      }
     }
 
     final public ClassDeclNode ClassDecl() throws ParseException {
@@ -130,96 +90,74 @@ stmts.add(s);
                 jj_consume_token(getToken(1).kind);
             }
 
+            // Lookahead to distinguish Field vs Constructor vs Method
+            // Constructor: Name ( ...
+            // Method: Type Name ( ...
+            // Field: Type Name ...
+
+            // We need to parse the type first or checking if the first token matches the class name (Constructor)
             Token t1 = getToken(1);
             Token t2 = getToken(2);
             Token t3 = getToken(3);
 
-            if (t2.kind == LPAREN) {
-                // Constructor: Name ( ...
-                jj_consume_token(IDENTIFIER); // name
-                jj_consume_token(LPAREN);
-                List<VarDeclNode> params = new ArrayList<>();
-                if (getToken(1).kind != RPAREN) params = ParamList();
-                jj_consume_token(RPAREN);
-                BlockNode body = Block();
-                methods.add(new FunctionDeclNode(name.image, name.image, params, body));
-            } else if (t3.kind == LPAREN) {
-                // Method: Type Name ( ...
-                String type = ParseType();
-                Token mName = jj_consume_token(IDENTIFIER);
-                jj_consume_token(LPAREN);
-                List<VarDeclNode> params = new ArrayList<>();
-                if (getToken(1).kind != RPAREN) params = ParamList();
-                jj_consume_token(RPAREN);
-                BlockNode body = Block();
-                methods.add(new FunctionDeclNode(type, mName.image, params, body));
+            boolean isConstructor = (t1.kind == IDENTIFIER && t1.image.equals(name.image) && t2.kind == LPAREN);
+
+            if (isConstructor) {
+                 jj_consume_token(IDENTIFIER); // name
+                 jj_consume_token(LPAREN);
+                 List<VarDeclNode> params = new ArrayList<>();
+                 if (getToken(1).kind != RPAREN) params = ParamList();
+                 jj_consume_token(RPAREN);
+                 BlockNode body = Block();
+                 methods.add(new FunctionDeclNode(name.image, name.image, params, body));
             } else {
-                // Field: Type Name ...
+                // Method or Field
+                // Both start with Type Name
                 String type = ParseType();
-                Token fName = jj_consume_token(IDENTIFIER);
-                ExpressionNode init = null;
-                if (getToken(1).kind == ASSIGN) {
-                    jj_consume_token(ASSIGN);
-                    init = Expression();
+                Token memberName = jj_consume_token(IDENTIFIER);
+
+                if (getToken(1).kind == LPAREN) {
+                    // Method
+                    jj_consume_token(LPAREN);
+                    List<VarDeclNode> params = new ArrayList<>();
+                    if (getToken(1).kind != RPAREN) params = ParamList();
+                    jj_consume_token(RPAREN);
+                    BlockNode body = Block();
+                    methods.add(new FunctionDeclNode(type, memberName.image, params, body));
+                } else {
+                    // Field
+                    ExpressionNode init = null;
+                    if (getToken(1).kind == ASSIGN) {
+                        jj_consume_token(ASSIGN);
+                        init = Expression();
+                    }
+                    jj_consume_token(SEMI);
+                    fields.add(new VarDeclNode(type, memberName.image, init));
                 }
-                jj_consume_token(SEMI);
-                fields.add(new VarDeclNode(type, fName.image, init));
             }
         }
         jj_consume_token(RBRACE);
         return new ClassDeclNode(name.image, fields, methods);
     }
 
-    String ParseType() throws ParseException {
-        if (getToken(1).kind == INT) return jj_consume_token(INT).image;
-        if (getToken(1).kind == VOID) return jj_consume_token(VOID).image;
-        return jj_consume_token(IDENTIFIER).image;
-    }
-
-    // ---------- Statements ----------
-    final public ASTNode Statement() throws ParseException {
-        switch (getToken(1).kind) {
-            case INT:
-                return VarDecl();
-            case IDENTIFIER:
-                // Check if it's a Declaration (Type ID ...)
-                if (getToken(2).kind == IDENTIFIER) {
-                     if (getToken(3).kind == LPAREN) return FunctionDecl();
-                     return VarDecl();
-                }
-                // Otherwise it's an Expression Statement (assignment or call)
-                return ExprStmt();
-            case IF: return IfStmt();
-            case WHILE: return WhileStmt();
-            case FOR: return ForStmt();
-            case LBRACE: return Block();
-            case VOID: return FunctionDecl();
-            case RETURN: return ReturnStmt();
-            case SEMI:
-                jj_consume_token(SEMI);
-                return new EmptyNode();
-            default:
-                return ExprStmt();
+    final public ASTNode FunctionDecl() throws ParseException {
+        String type = "void";
+        if (getToken(1).kind == VOID) {
+            jj_consume_token(VOID);
+        } else {
+            type = ParseType();
         }
+
+        Token id = jj_consume_token(IDENTIFIER);
+        jj_consume_token(LPAREN);
+        List<VarDeclNode> params = new ArrayList<>();
+        if (getToken(1).kind != RPAREN) {
+            params = ParamList();
+        }
+        jj_consume_token(RPAREN);
+        BlockNode body = Block();
+        return new FunctionDeclNode(type, id.image, params, body);
     }
-
-// Assignment
-  final public AssignmentNode Assignment() throws ParseException {Token id; ExpressionNode expr;
-    id = jj_consume_token(IDENTIFIER);
-    jj_consume_token(ASSIGN);
-    expr = Expression();
-    jj_consume_token(SEMI);
-{if ("" != null) return new AssignmentNode(new IdentifierNode(id.image), expr);}
-    throw new Error("Missing return statement in function");
-}
-
-// Expr stmt
-  final public ASTNode ExprStmt() throws ParseException {ASTNode e;
-    e = Expression();
-    jj_consume_token(SEMI);
-{if ("" != null) return e;}
-    throw new Error("Missing return statement in function");
-}
 
     final public ASTNode VarDecl() throws ParseException {
         String type = ParseType();
@@ -233,6 +171,13 @@ stmts.add(s);
         return new VarDeclNode(type, id.image, expr);
     }
 
+    String ParseType() throws ParseException {
+        if (getToken(1).kind == INT) return jj_consume_token(INT).image;
+        if (getToken(1).kind == VOID) return jj_consume_token(VOID).image; // Though usually void is handled separately
+        if (getToken(1).kind == IDENTIFIER) return jj_consume_token(IDENTIFIER).image; // Class types
+        throw new ParseException("Expected type, found " + getToken(1));
+    }
+
     final public AssignmentNode Assignment() throws ParseException {
         Token id = jj_consume_token(IDENTIFIER);
         jj_consume_token(ASSIGN);
@@ -243,17 +188,164 @@ stmts.add(s);
 
     final public ASTNode ExprStmt() throws ParseException {
         ExpressionNode e = Expression();
+        // Check if it was actually an assignment masquerading as expression (e.g. if we parsed an identifier)
+        // But the Statement() method dispatches to Assignment() if it sees IDENTIFIER followed by ASSIGN.
+        // However, if we are here, it might be a method call or other expression.
+
+        // Wait, Statement() handles Assignment() separately.
+        // But what if we have `x.y = 5;`? That starts with IDENTIFIER.
+        // My parser in Statement() only checks `getToken(2) == ASSIGN`.
+        // `x.y` is IDENTIFIER DOT IDENTIFIER.
+
+        // Let's rely on ExprStmt handling assignments if they were not caught by Statement().
+        // But `AssignmentNode` expects `IdentifierNode` on LHS, not arbitrary expression (in this simple language?).
+        // If the language supports field assignment `obj.field = val`, we need `MemberAccessNode` or similar.
+        // For now, let's assume `Expression` consumes everything.
+
+        // If the next token is ASSIGN, then `Expression()` returned the LHS.
         if (getToken(1).kind == ASSIGN) {
-            jj_consume_token(ASSIGN);
-            ExpressionNode rhs = Expression();
-            jj_consume_token(SEMI);
-            return new AssignmentNode(e, rhs);
+             jj_consume_token(ASSIGN);
+             ExpressionNode rhs = Expression();
+             jj_consume_token(SEMI);
+             return new AssignmentNode(e, rhs);
         }
+
         jj_consume_token(SEMI);
         return e;
     }
 
+    final public ASTNode IfStmt() throws ParseException {
+        jj_consume_token(IF);
+        jj_consume_token(LPAREN);
+        ExpressionNode cond = Expression();
+        jj_consume_token(RPAREN);
+        BlockNode thenBlock = Block();
+        BlockNode elseBlock = null;
+
+        if (getToken(1).kind == ELSE) {
+            jj_consume_token(ELSE);
+            if (getToken(1).kind == IF) {
+                // else if ... -> treat as else { if ... }
+                ASTNode elseIf = IfStmt();
+                List<ASTNode> stmts = new ArrayList<>();
+                stmts.add(elseIf);
+                elseBlock = new BlockNode(stmts);
+            } else {
+                elseBlock = Block();
+            }
+        }
+        return new IfNode(cond, thenBlock, elseBlock);
+    }
+
+    final public ASTNode WhileStmt() throws ParseException {
+        jj_consume_token(WHILE);
+        jj_consume_token(LPAREN);
+        ExpressionNode cond = Expression();
+        jj_consume_token(RPAREN);
+        BlockNode body = Block();
+        return new WhileNode(cond, body);
+    }
+
+    final public ASTNode ForStmt() throws ParseException {
+        jj_consume_token(FOR);
+        jj_consume_token(LPAREN);
+
+        VarDeclNode varDecl = null;
+        AssignmentNode assign = null;
+
+        // Init: VarDecl or Assignment or Empty
+        if (getToken(1).kind == INT) {
+            // VarDecl without SEMI (handled manually here)
+            String type = jj_consume_token(INT).image;
+            Token id = jj_consume_token(IDENTIFIER);
+            ExpressionNode init = null;
+            if (getToken(1).kind == ASSIGN) {
+                jj_consume_token(ASSIGN);
+                init = Expression();
+            }
+            varDecl = new VarDeclNode(type, id.image, init);
+        } else if (getToken(1).kind == IDENTIFIER) {
+            // Assignment without SEMI
+            Token id = jj_consume_token(IDENTIFIER);
+            jj_consume_token(ASSIGN);
+            ExpressionNode init = Expression();
+            assign = new AssignmentNode(new IdentifierNode(id.image), init);
+        }
+
+        jj_consume_token(SEMI);
+
+        ExpressionNode cond = null;
+        if (getToken(1).kind != SEMI) {
+            cond = Expression();
+        }
+        jj_consume_token(SEMI);
+
+        ExpressionNode update = null;
+        if (getToken(1).kind != RPAREN) {
+            update = Expression();
+        }
+        jj_consume_token(RPAREN);
+
+        BlockNode body = Block();
+
+        if (varDecl != null) {
+            return new ForNode(varDecl, cond, update, body);
+        } else {
+            return new ForNode(assign, cond, update, body);
+        }
+    }
+
+    final public ASTNode ReturnStmt() throws ParseException {
+        jj_consume_token(RETURN);
+        ExpressionNode e = null;
+        if (getToken(1).kind != SEMI) {
+            e = Expression();
+        }
+        jj_consume_token(SEMI);
+        return new ReturnNode(e);
+    }
+
+    final public BlockNode Block() throws ParseException {
+        jj_consume_token(LBRACE);
+        List<ASTNode> stmts = new ArrayList<>();
+        while (getToken(1).kind != RBRACE && getToken(1).kind != EOF) {
+            stmts.add(Statement());
+        }
+        jj_consume_token(RBRACE);
+        return new BlockNode(stmts);
+    }
+
+    final public List<VarDeclNode> ParamList() throws ParseException {
+        List<VarDeclNode> params = new ArrayList<>();
+        do {
+            String type = ParseType();
+            Token id = jj_consume_token(IDENTIFIER);
+            params.add(new VarDeclNode(type, id.image, null));
+
+            if (getToken(1).kind == COMMA) {
+                jj_consume_token(COMMA);
+            } else {
+                break;
+            }
+        } while (true);
+        return params;
+    }
+
+    final public List<ExpressionNode> ArgList() throws ParseException {
+        List<ExpressionNode> args = new ArrayList<>();
+        do {
+            args.add(Expression());
+            if (getToken(1).kind == COMMA) {
+                jj_consume_token(COMMA);
+            } else {
+                break;
+            }
+        } while (true);
+        return args;
+    }
+
     // ---------- Expressions ----------
+
     final public ExpressionNode Expression() throws ParseException {
         return LogicalOr();
     }
@@ -288,200 +380,60 @@ stmts.add(s);
         return left;
     }
 
-  final public ExpressionNode Factor() throws ParseException {Token t; ExpressionNode e;
-    ExpressionNode result;
-    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-    case INT_LITERAL:{
-      t = jj_consume_token(INT_LITERAL);
-{if ("" != null) return new LiteralNode(t.image);}
-      break;
-      }
-    case STRING_LITERAL:{
-      t = jj_consume_token(STRING_LITERAL);
-{if ("" != null) return new LiteralNode(t.image);}
-      break;
-      }
-    case TRUE:{
-      t = jj_consume_token(TRUE);
-{if ("" != null) return new LiteralNode("true");}
-      break;
-      }
-    case FALSE:{
-      t = jj_consume_token(FALSE);
-{if ("" != null) return new LiteralNode("false");}
-      break;
-      }
-    case NULL:{
-      t = jj_consume_token(NULL);
-{if ("" != null) return new LiteralNode("null");}
-      break;
-      }
-    case IDENTIFIER:{
-      t = jj_consume_token(IDENTIFIER);
-// default: just the identifier
-          result = new IdentifierNode(t.image);
-      switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-      case INCR:
-      case DECR:{
-        switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-        case INCR:{
-          jj_consume_token(INCR);
-result = new UnaryOpNode("post++", new IdentifierNode(t.image));
-          break;
-          }
-        case DECR:{
-          jj_consume_token(DECR);
-result = new UnaryOpNode("post--", new IdentifierNode(t.image));
-          break;
-          }
-        default:
-          jj_la1[15] = jj_gen;
-          jj_consume_token(-1);
-          throw new ParseException();
-        }
-        break;
-        }
-      default:
-        jj_la1[16] = jj_gen;
-        ;
-      }
-{if ("" != null) return result;}
-      break;
-      }
-    case LPAREN:{
-      jj_consume_token(LPAREN);
-      e = Expression();
-      jj_consume_token(RPAREN);
-{if ("" != null) return e;}
-      break;
-      }
-    default:
-      jj_la1[17] = jj_gen;
-      jj_consume_token(-1);
-      throw new ParseException();
-    }
-
-// ---------- Control Structures ----------
-  final public ASTNode IfStmt() throws ParseException {ExpressionNode cond; BlockNode thenBlock, elseBlock=null;
-    jj_consume_token(IF);
-    jj_consume_token(LPAREN);
-    cond = Expression();
-    jj_consume_token(RPAREN);
-    thenBlock = Block();
-    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-    case ELSE:{
-      jj_consume_token(ELSE);
-      elseBlock = Block();
-      break;
-      }
-    default:
-      jj_la1[18] = jj_gen;
-      ;
-    }
-{if ("" != null) return new IfNode(cond, thenBlock, elseBlock);}
-    throw new Error("Missing return statement in function");
-}
-
-  final public ASTNode WhileStmt() throws ParseException {ExpressionNode cond; BlockNode body;
-    jj_consume_token(WHILE);
-    jj_consume_token(LPAREN);
-    cond = Expression();
-    jj_consume_token(RPAREN);
-    body = Block();
-{if ("" != null) return new WhileNode(cond, body);}
-    throw new Error("Missing return statement in function");
-}
-
-// Productions for for-loop
-  final public VarDeclNode VarDeclForLoop() throws ParseException {Token t; Token id; ExpressionNode expr = null;
-    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-    case INT:{
-      t = jj_consume_token(INT);
-      break;
-      }
-    case IDENTIFIER:{
-      t = jj_consume_token(IDENTIFIER);
-      break;
-      }
-    default:
-      jj_la1[19] = jj_gen;
-      jj_consume_token(-1);
-      throw new ParseException();
-    }
-    id = jj_consume_token(IDENTIFIER);
-    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-    case ASSIGN:{
-      jj_consume_token(ASSIGN);
-      expr = Expression();
-      break;
-      }
-    default:
-      jj_la1[20] = jj_gen;
-      ;
-    }
-{if ("" != null) return new VarDeclNode(t.image, id.image, expr);}
-    throw new Error("Missing return statement in function");
-}
-
-  final public AssignmentNode AssignmentForLoop() throws ParseException {Token id; ExpressionNode expr;
-    id = jj_consume_token(IDENTIFIER);
-    jj_consume_token(ASSIGN);
-    expr = Expression();
-{if ("" != null) return new AssignmentNode(new IdentifierNode(id.image), expr);}
-    throw new Error("Missing return statement in function");
-}
-
-  final public ASTNode ForStmt() throws ParseException {ExpressionNode cond=null, update=null; BlockNode body; VarDeclNode vardeclinit=null; AssignmentNode assignmentinit=null;
-    jj_consume_token(FOR);
-    jj_consume_token(LPAREN);
-    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-    case IDENTIFIER:{
-      assignmentinit = AssignmentForLoop();
-      break;
-      }
-    default:
-      jj_la1[21] = jj_gen;
-      ;
-    }
-    jj_consume_token(SEMI);
-    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-    case TRUE:
-    case FALSE:
-    case NULL:
-    case INT_LITERAL:
-    case STRING_LITERAL:
-    case LPAREN:
-    case IDENTIFIER:{
-      cond = Expression();
-      break;
-      }
-    default:
-      jj_la1[22] = jj_gen;
-      ;
-    }
-    jj_consume_token(SEMI);
-    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-    case TRUE:
-    case FALSE:
-    case NULL:
-    case INT_LITERAL:
-    case STRING_LITERAL:
-    case LPAREN:
-    case IDENTIFIER:{
-      update = Expression();
-      break;
-      }
-    default:
-      jj_la1[23] = jj_gen;
-      ;
-    }
-    jj_consume_token(RPAREN);
-    body = Block();
-ForNode returnMe =null;
-        if (vardeclinit != null) {
-            returnMe = new ForNode(vardeclinit, cond, update, body);
+    final public ExpressionNode Relational() throws ParseException {
+        ExpressionNode left = Additive();
+        while (getToken(1).kind == LT || getToken(1).kind == GT /* || getToken(1).kind == LTE || getToken(1).kind == GTE */) {
+            Token op = jj_consume_token(getToken(1).kind);
+            ExpressionNode right = Additive();
+            left = new BinaryOpNode(op.image, left, right);
         }
         return left;
+    }
+
+    final public ExpressionNode Additive() throws ParseException {
+        ExpressionNode left = Multiplicative();
+        while (getToken(1).kind == PLUS || getToken(1).kind == MINUS) {
+            Token op = jj_consume_token(getToken(1).kind);
+            ExpressionNode right = Multiplicative();
+            left = new BinaryOpNode(op.image, left, right);
+        }
+        return left;
+    }
+
+    final public ExpressionNode Multiplicative() throws ParseException {
+        ExpressionNode left = Unary();
+        while (getToken(1).kind == MULT || getToken(1).kind == DIV) {
+            Token op = jj_consume_token(getToken(1).kind);
+            ExpressionNode right = Unary();
+            left = new BinaryOpNode(op.image, left, right);
+        }
+        return left;
+    }
+
+    final public ExpressionNode Unary() throws ParseException {
+        if (getToken(1).kind == MINUS || getToken(1).kind == PLUS) { // Unary minus/plus
+             Token op = jj_consume_token(getToken(1).kind);
+             ExpressionNode e = Unary(); // Right associative or just Factor? Usually Unary.
+             // But for - - 5 it should work.
+             // UnaryOpNode might expect "negate" or similar? Or just "-"
+             // The AST expects "negate"? Or just the operator string?
+             // Checking AST usage: `new UnaryOpNode("post++", ...)`
+             // I'll use the operator string.
+             return new UnaryOpNode(op.image, e);
+        }
+        // logical not !
+        // Token '!' is not in the constants list explicitly?
+        // Ah, checked constants: LT, GT, NEQ... I don't see NOT/BANG.
+        // Wait, `!=` is NEQ.
+        // If `!` is supported, it should be in constants.
+        // Checked MyParserConstants.java: I don't see `!` or `NOT`.
+        // Maybe it's missing?
+        // But `!=` exists.
+        // If the language supports `!boolean`, it should be there.
+        // Assuming it's not supported or I missed it.
+        // I'll skip logical not for now unless I see it.
+
+        return Factor();
     }
 
     final public ExpressionNode Factor() throws ParseException {
@@ -508,6 +460,21 @@ ForNode returnMe =null;
             case THIS:
                 jj_consume_token(THIS);
                 e = new IdentifierNode("this");
+                if (getToken(1).kind == DOT) {
+                     jj_consume_token(DOT);
+                     Token member = jj_consume_token(IDENTIFIER);
+                     if (getToken(1).kind == LPAREN) {
+                         jj_consume_token(LPAREN);
+                         List<ExpressionNode> callArgs = new ArrayList<>();
+                         if (getToken(1).kind != RPAREN) {
+                             callArgs = ArgList();
+                         }
+                         jj_consume_token(RPAREN);
+                         e = new MethodCallNode(new IdentifierNode("this"), member.image, callArgs);
+                     } else {
+                         e = new MemberAccessNode(new IdentifierNode("this"), member.image);
+                     }
+                }
                 break;
             case NEW:
                 jj_consume_token(NEW);
@@ -530,6 +497,23 @@ ForNode returnMe =null;
                     }
                     jj_consume_token(RPAREN);
                     e = new MethodCallNode(null, t.image, callArgs);
+                } else if (getToken(1).kind == DOT) {
+                     // Handle Member Access or Method Call on object
+                     // t.field or t.method()
+                     jj_consume_token(DOT);
+                     Token member = jj_consume_token(IDENTIFIER);
+                     if (getToken(1).kind == LPAREN) {
+                         jj_consume_token(LPAREN);
+                         List<ExpressionNode> callArgs = new ArrayList<>();
+                         if (getToken(1).kind != RPAREN) {
+                             callArgs = ArgList();
+                         }
+                         jj_consume_token(RPAREN);
+                         e = new MethodCallNode(new IdentifierNode(t.image), member.image, callArgs);
+                     } else {
+                         // Field access
+                         e = new MemberAccessNode(new IdentifierNode(t.image), member.image);
+                     }
                 } else if (getToken(1).kind == INCR) {
                     jj_consume_token(INCR);
                     e = new UnaryOpNode("post++", new IdentifierNode(t.image));
@@ -548,444 +532,17 @@ ForNode returnMe =null;
             default:
                 throw new ParseException("Unexpected token in Factor: " + getToken(1));
         }
-
-        {if ("" != null) return returnMe;}
-    throw new Error("Missing return statement in function");
-}
-
-  final public BlockNode Block() throws ParseException {List<ASTNode> stmts = new ArrayList<>(); ASTNode s;
-    jj_consume_token(LBRACE);
-    label_8:
-    while (true) {
-      switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-      case IF:
-      case WHILE:
-      case FOR:
-      case VOID:
-      case RETURN:
-      case INT:
-      case TRUE:
-      case FALSE:
-      case NULL:
-      case INT_LITERAL:
-      case STRING_LITERAL:
-      case LPAREN:
-      case LBRACE:
-      case SEMI:
-      case IDENTIFIER:{
-        ;
-        break;
-        }
-      default:
-        jj_la1[24] = jj_gen;
-        break label_8;
-      }
-      s = Statement();
-stmts.add(s);
-    }
-    jj_consume_token(RBRACE);
-{if ("" != null) return new BlockNode(stmts);}
-    throw new Error("Missing return statement in function");
-}
-
-  final public ASTNode FunctionDecl() throws ParseException {Token t; Token id; List<VarDeclNode> params = new ArrayList<>(); BlockNode body;
-    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-    case VOID:{
-      t = jj_consume_token(VOID);
-      break;
-      }
-    case INT:{
-      t = jj_consume_token(INT);
-      break;
-      }
-    case IDENTIFIER:{
-      t = jj_consume_token(IDENTIFIER);
-      break;
-      }
-    default:
-      jj_la1[25] = jj_gen;
-      jj_consume_token(-1);
-      throw new ParseException();
-    }
-    id = jj_consume_token(IDENTIFIER);
-    jj_consume_token(LPAREN);
-    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-    case INT:
-    case IDENTIFIER:{
-      params = ParamList();
-      break;
-      }
-    default:
-      jj_la1[26] = jj_gen;
-      ;
-    }
-    jj_consume_token(RPAREN);
-    body = Block();
-{if ("" != null) return new FunctionDeclNode(t.image, id.image, params, body);}
-    throw new Error("Missing return statement in function");
-}
-
-  final public List<VarDeclNode> ParamList() throws ParseException {List<VarDeclNode> params = new ArrayList<>();
-    Token t, id;
-    switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-    case INT:{
-      t = jj_consume_token(INT);
-      break;
-      }
-    case IDENTIFIER:{
-      t = jj_consume_token(IDENTIFIER);
-      break;
-      }
-    default:
-      jj_la1[27] = jj_gen;
-      jj_consume_token(-1);
-      throw new ParseException();
-    }
-    id = jj_consume_token(IDENTIFIER);
-params.add(new VarDeclNode(t.image, id.image, null));
-    label_9:
-    while (true) {
-      switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-      case COMMA:{
-        ;
-        break;
-        }
-      default:
-        jj_la1[28] = jj_gen;
-        break label_9;
-      }
-      jj_consume_token(COMMA);
-      switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
-      case INT:{
-        t = jj_consume_token(INT);
-        break;
-        }
-        return args;
+        return e;
     }
 
-    // ---------- Control Structures ----------
-    final public ASTNode IfStmt() throws ParseException {
-        jj_consume_token(IF);
-        jj_consume_token(LPAREN);
-        ExpressionNode cond = Expression();
-        jj_consume_token(RPAREN);
-        BlockNode thenBlock = Block();
-        BlockNode elseBlock = null;
-        if (getToken(1).kind == ELSE) {
-            jj_consume_token(ELSE);
-            if (getToken(1).kind == IF) {
-                ASTNode elseIf = IfStmt();
-                List<ASTNode> stmts = new ArrayList<>();
-                stmts.add(elseIf);
-                elseBlock = new BlockNode(stmts);
-            } else {
-                elseBlock = Block();
-            }
-        }
-      default:
-        jj_la1[29] = jj_gen;
-        jj_consume_token(-1);
-        throw new ParseException();
-      }
-      id = jj_consume_token(IDENTIFIER);
-params.add(new VarDeclNode(t.image, id.image, null));
-    }
 
-  private boolean jj_2_1(int xla)
- {
-    jj_la = xla; jj_lastpos = jj_scanpos = token;
-    try { return (!jj_3_1()); }
-    catch(LookaheadSuccess ls) { return true; }
-    finally { jj_save(0, xla); }
-  }
+  // =========================================================================
+  // Generated Token Manager Infrastructure (Do Not Modify)
+  // =========================================================================
 
-  private boolean jj_2_2(int xla)
- {
-    jj_la = xla; jj_lastpos = jj_scanpos = token;
-    try { return (!jj_3_2()); }
-    catch(LookaheadSuccess ls) { return true; }
-    finally { jj_save(1, xla); }
-  }
-
-  private boolean jj_3R_Additive_221_7_24()
- {
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_scan_token(28)) {
-    jj_scanpos = xsp;
-    if (jj_scan_token(29)) return true;
-    }
-    if (jj_3R_Term_232_5_23()) return true;
-    return false;
-  }
-
-  private boolean jj_3R_LogicalOr_174_5_14()
- {
-    if (jj_3R_LogicalAnd_185_5_15()) return true;
-    Token xsp;
-    while (true) {
-      xsp = jj_scanpos;
-      if (jj_3R_LogicalOr_174_25_16()) { jj_scanpos = xsp; break; }
-    }
-    return false;
-  }
-
-  private boolean jj_3R_Additive_220_5_21()
- {
-    if (jj_3R_Term_232_5_23()) return true;
-    Token xsp;
-    while (true) {
-      xsp = jj_scanpos;
-      if (jj_3R_Additive_221_7_24()) { jj_scanpos = xsp; break; }
-    }
-    return false;
-  }
-
-  private boolean jj_3R_Factor_258_11_36()
- {
-    if (jj_scan_token(DECR)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_Factor_262_7_33()
- {
-    if (jj_scan_token(LPAREN)) return true;
-    if (jj_3R_Expression_167_55_13()) return true;
-    if (jj_scan_token(RPAREN)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_Expression_167_55_13()
- {
-    if (jj_3R_LogicalOr_174_5_14()) return true;
-    return false;
-  }
-
-  private boolean jj_3R_Factor_257_11_35()
- {
-    if (jj_scan_token(INCR)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_Factor_257_11_34()
- {
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_3R_Factor_257_11_35()) {
-    jj_scanpos = xsp;
-    if (jj_3R_Factor_258_11_36()) return true;
-    }
-    return false;
-  }
-
-  private boolean jj_3_2()
- {
-    if (jj_3R_Assignment_150_5_11()) return true;
-    return false;
-  }
-
-  private boolean jj_3_1()
- {
-    if (jj_3R_VarDecl_138_5_10()) return true;
-    return false;
-  }
-
-  private boolean jj_3R_Relational_209_7_22()
- {
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_scan_token(32)) {
-    jj_scanpos = xsp;
-    if (jj_scan_token(33)) return true;
-    }
-    if (jj_3R_Additive_220_5_21()) return true;
-    return false;
-  }
-
-  private boolean jj_3R_Relational_208_5_19()
- {
-    if (jj_3R_Additive_220_5_21()) return true;
-    Token xsp;
-    while (true) {
-      xsp = jj_scanpos;
-      if (jj_3R_Relational_209_7_22()) { jj_scanpos = xsp; break; }
-    }
-    return false;
-  }
-
-  private boolean jj_3R_Factor_251_7_32()
- {
-    if (jj_scan_token(IDENTIFIER)) return true;
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_3R_Factor_257_11_34()) jj_scanpos = xsp;
-    return false;
-  }
-
-  private boolean jj_3R_Factor_249_7_31()
- {
-    if (jj_scan_token(NULL)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_Factor_248_7_30()
- {
-    if (jj_scan_token(FALSE)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_LogicalAnd_185_23_18()
- {
-    if (jj_scan_token(AND)) return true;
-    if (jj_3R_Equality_196_5_17()) return true;
-    return false;
-  }
-
-  private boolean jj_3R_Factor_247_7_29()
- {
-    if (jj_scan_token(TRUE)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_Factor_246_7_28()
- {
-    if (jj_scan_token(STRING_LITERAL)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_Factor_245_7_27()
- {
-    if (jj_scan_token(INT_LITERAL)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_Factor_245_7_25()
- {
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_3R_Factor_245_7_27()) {
-    jj_scanpos = xsp;
-    if (jj_3R_Factor_246_7_28()) {
-    jj_scanpos = xsp;
-    if (jj_3R_Factor_247_7_29()) {
-    jj_scanpos = xsp;
-    if (jj_3R_Factor_248_7_30()) {
-    jj_scanpos = xsp;
-    if (jj_3R_Factor_249_7_31()) {
-    jj_scanpos = xsp;
-    if (jj_3R_Factor_251_7_32()) {
-    jj_scanpos = xsp;
-    if (jj_3R_Factor_262_7_33()) return true;
-    }
-    }
-    }
-    }
-    }
-    }
-    return false;
-  }
-
-  private boolean jj_3R_Equality_197_7_20()
- {
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_scan_token(24)) {
-    jj_scanpos = xsp;
-    if (jj_scan_token(34)) return true;
-    }
-    if (jj_3R_Relational_208_5_19()) return true;
-    return false;
-  }
-
-  private boolean jj_3R_Assignment_150_5_11()
- {
-    if (jj_scan_token(IDENTIFIER)) return true;
-    if (jj_scan_token(ASSIGN)) return true;
-    if (jj_3R_Expression_167_55_13()) return true;
-    if (jj_scan_token(SEMI)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_Equality_196_5_17()
- {
-    if (jj_3R_Relational_208_5_19()) return true;
-    Token xsp;
-    while (true) {
-      xsp = jj_scanpos;
-      if (jj_3R_Equality_197_7_20()) { jj_scanpos = xsp; break; }
-    }
-    return false;
-  }
-
-  private boolean jj_3R_LogicalOr_174_25_16()
- {
-    if (jj_scan_token(OR)) return true;
-    if (jj_3R_LogicalAnd_185_5_15()) return true;
-    return false;
-  }
-
-  private boolean jj_3R_Term_233_7_26()
- {
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_scan_token(30)) {
-    jj_scanpos = xsp;
-    if (jj_scan_token(31)) return true;
-    }
-    if (jj_3R_Factor_245_7_25()) return true;
-    return false;
-  }
-
-  private boolean jj_3R_VarDecl_138_5_10()
- {
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_scan_token(13)) {
-    jj_scanpos = xsp;
-    if (jj_scan_token(44)) return true;
-    }
-    if (jj_scan_token(IDENTIFIER)) return true;
-    xsp = jj_scanpos;
-    if (jj_3R_VarDecl_138_50_12()) jj_scanpos = xsp;
-    if (jj_scan_token(SEMI)) return true;
-    return false;
-  }
-
-  private boolean jj_3R_LogicalAnd_185_5_15()
- {
-    if (jj_3R_Equality_196_5_17()) return true;
-    Token xsp;
-    while (true) {
-      xsp = jj_scanpos;
-      if (jj_3R_LogicalAnd_185_23_18()) { jj_scanpos = xsp; break; }
-    }
-    return false;
-  }
-
-  private boolean jj_3R_Term_232_5_23()
- {
-    if (jj_3R_Factor_245_7_25()) return true;
-    Token xsp;
-    while (true) {
-      xsp = jj_scanpos;
-      if (jj_3R_Term_233_7_26()) { jj_scanpos = xsp; break; }
-    }
-    return false;
-  }
-
-  private boolean jj_3R_VarDecl_138_50_12()
- {
-    if (jj_scan_token(ASSIGN)) return true;
-    if (jj_3R_Expression_167_55_13()) return true;
-    return false;
-  }
-
-  /** Generated Token Manager. */
   public MyParserTokenManager token_source;
   SimpleCharStream jj_input_stream;
-  /** Current token. */
   public Token token;
-  /** Next token. */
   public Token jj_nt;
   private int jj_ntk;
   private Token jj_scanpos, jj_lastpos;
@@ -1008,11 +565,9 @@ params.add(new VarDeclNode(t.image, id.image, null));
   private boolean jj_rescan = false;
   private int jj_gc = 0;
 
-  /** Constructor with InputStream. */
   public MyParser(java.io.InputStream stream) {
 	  this(stream, null);
   }
-  /** Constructor with InputStream and supplied encoding */
   public MyParser(java.io.InputStream stream, String encoding) {
 	 try { jj_input_stream = new SimpleCharStream(stream, encoding, 1, 1); } catch(java.io.UnsupportedEncodingException e) { throw new RuntimeException(e); }
 	 token_source = new MyParserTokenManager(jj_input_stream);
@@ -1022,12 +577,9 @@ params.add(new VarDeclNode(t.image, id.image, null));
 	 for (int i = 0; i < 30; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
-
-  /** Reinitialise. */
   public void ReInit(java.io.InputStream stream) {
 	  ReInit(stream, null);
   }
-  /** Reinitialise. */
   public void ReInit(java.io.InputStream stream, String encoding) {
 	 try { jj_input_stream.ReInit(stream, encoding, 1, 1); } catch(java.io.UnsupportedEncodingException e) { throw new RuntimeException(e); }
 	 token_source.ReInit(jj_input_stream);
@@ -1037,8 +589,6 @@ params.add(new VarDeclNode(t.image, id.image, null));
 	 for (int i = 0; i < 30; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
-
-  /** Constructor. */
   public MyParser(java.io.Reader stream) {
 	 jj_input_stream = new SimpleCharStream(stream, 1, 1);
 	 token_source = new MyParserTokenManager(jj_input_stream);
@@ -1048,8 +598,6 @@ params.add(new VarDeclNode(t.image, id.image, null));
 	 for (int i = 0; i < 30; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
-
-  /** Reinitialise. */
   public void ReInit(java.io.Reader stream) {
 	if (jj_input_stream == null) {
 	   jj_input_stream = new SimpleCharStream(stream, 1, 1);
@@ -1059,7 +607,6 @@ params.add(new VarDeclNode(t.image, id.image, null));
 	if (token_source == null) {
  token_source = new MyParserTokenManager(jj_input_stream);
 	}
-
 	 token_source.ReInit(jj_input_stream);
 	 token = new Token();
 	 jj_ntk = -1;
@@ -1067,8 +614,6 @@ params.add(new VarDeclNode(t.image, id.image, null));
 	 for (int i = 0; i < 30; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
-
-  /** Constructor with generated Token Manager. */
   public MyParser(MyParserTokenManager tm) {
 	 token_source = tm;
 	 token = new Token();
@@ -1077,8 +622,6 @@ params.add(new VarDeclNode(t.image, id.image, null));
 	 for (int i = 0; i < 30; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
-
-  /** Reinitialise. */
   public void ReInit(MyParserTokenManager tm) {
 	 token_source = tm;
 	 token = new Token();
@@ -1087,7 +630,6 @@ params.add(new VarDeclNode(t.image, id.image, null));
 	 for (int i = 0; i < 30; i++) jj_la1[i] = -1;
 	 for (int i = 0; i < jj_2_rtns.length; i++) jj_2_rtns[i] = new JJCalls();
   }
-
   private Token jj_consume_token(int kind) throws ParseException {
 	 Token oldToken;
 	 if ((oldToken = token).next != null) token = token.next;
@@ -1111,7 +653,6 @@ params.add(new VarDeclNode(t.image, id.image, null));
 	 jj_kind = kind;
 	 throw generateParseException();
   }
-
   @SuppressWarnings("serial")
   static private final class LookaheadSuccess extends java.lang.Error {
     @Override
@@ -1140,9 +681,6 @@ params.add(new VarDeclNode(t.image, id.image, null));
 	 if (jj_la == 0 && jj_scanpos == jj_lastpos) throw jj_ls;
 	 return false;
   }
-
-
-/** Get the next Token. */
   final public Token getNextToken() {
 	 if (token.next != null) token = token.next;
 	 else token = token.next = token_source.getNextToken();
@@ -1150,8 +688,6 @@ params.add(new VarDeclNode(t.image, id.image, null));
 	 jj_gen++;
 	 return token;
   }
-
-/** Get the specific Token. */
   final public Token getToken(int index) {
 	 Token t = token;
 	 for (int i = 0; i < index; i++) {
@@ -1160,44 +696,36 @@ params.add(new VarDeclNode(t.image, id.image, null));
 	 }
 	 return t;
   }
-
   private int jj_ntk_f() {
 	 if ((jj_nt=token.next) == null)
 	   return (jj_ntk = (token.next=token_source.getNextToken()).kind);
 	 else
 	   return (jj_ntk = jj_nt.kind);
   }
-
   private java.util.List<int[]> jj_expentries = new java.util.ArrayList<int[]>();
   private int[] jj_expentry;
   private int jj_kind = -1;
   private int[] jj_lasttokens = new int[100];
   private int jj_endpos;
-
   private void jj_add_error_token(int kind, int pos) {
 	 if (pos >= 100) {
 		return;
 	 }
-
 	 if (pos == jj_endpos + 1) {
 	   jj_lasttokens[jj_endpos++] = kind;
 	 } else if (jj_endpos != 0) {
 	   jj_expentry = new int[jj_endpos];
-
 	   for (int i = 0; i < jj_endpos; i++) {
 		 jj_expentry[i] = jj_lasttokens[i];
 	   }
-
 	   for (int[] oldentry : jj_expentries) {
 		 if (oldentry.length == jj_expentry.length) {
 		   boolean isMatched = true;
-
 		   for (int i = 0; i < jj_expentry.length; i++) {
 			 if (oldentry[i] != jj_expentry[i]) {
 			   isMatched = false;
 			   break;
 			 }
-
 		   }
 		   if (isMatched) {
 			 jj_expentries.add(jj_expentry);
@@ -1205,14 +733,11 @@ params.add(new VarDeclNode(t.image, id.image, null));
 		   }
 		 }
 	   }
-
 	   if (pos != 0) {
 		 jj_lasttokens[(jj_endpos = pos) - 1] = kind;
 	   }
 	 }
   }
-
-  /** Generate ParseException. */
   public ParseException generateParseException() {
 	 jj_expentries.clear();
 	 boolean[] la1tokens = new boolean[47];
@@ -1248,56 +773,43 @@ params.add(new VarDeclNode(t.image, id.image, null));
 	 }
 	 return new ParseException(token, exptokseq, tokenImage);
   }
-
   private boolean trace_enabled;
-
-/** Trace enabled. */
   final public boolean trace_enabled() {
 	 return trace_enabled;
   }
-
-  /** Enable tracing. */
   final public void enable_tracing() {
   }
-
-  /** Disable tracing. */
   final public void disable_tracing() {
   }
-
   private void jj_rescan_token() {
 	 jj_rescan = true;
 	 for (int i = 0; i < 2; i++) {
 	   try {
 		 JJCalls p = jj_2_rtns[i];
-
 		 do {
 		   if (p.gen > jj_gen) {
 			 jj_la = p.arg; jj_lastpos = jj_scanpos = p.first;
 			 switch (i) {
-			   case 0: jj_3_1(); break;
-			   case 1: jj_3_2(); break;
+			   case 0: break;
+			   case 1: break;
 			 }
 		   }
 		   p = p.next;
 		 } while (p != null);
-
 		 } catch(LookaheadSuccess ls) { }
 	 }
 	 jj_rescan = false;
   }
-
   private void jj_save(int index, int xla) {
 	 JJCalls p = jj_2_rtns[index];
 	 while (p.gen > jj_gen) {
 	   if (p.next == null) { p = p.next = new JJCalls(); break; }
 	   p = p.next;
 	 }
-
 	 p.gen = jj_gen + xla - jj_la; 
 	 p.first = token;
 	 p.arg = xla;
   }
-
   static final class JJCalls {
 	 int gen;
 	 Token first;
