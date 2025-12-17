@@ -8,8 +8,20 @@ public enum OpCode {
     SUB,
     MUL,
     DIV,
-    RETURN,
-    LABEL,
+    MOD,
+    AND,
+    OR,
+    NOT,
+    LT,
+    GT,
+    EQ,
+    NEQ,
     GOTO,
-    IFZ
+    IFZ,
+    LABEL,
+    PARAM,
+    CALL,
+    RETURN,
+    FUNC_START,
+    FUNC_END
 }

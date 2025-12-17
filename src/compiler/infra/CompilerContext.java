@@ -1,8 +1,11 @@
 package compiler.infra;
 
 import compiler.frontend.ast.ASTNode;
+import compiler.middle.tac.TACInstruction;
 
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 import compiler.middle.SymbolTable;
 import compiler.middle.SymbolTableImpl;
 
@@ -17,6 +20,9 @@ public class CompilerContext {
     private ASTNode ast;
     // optional symbol table built by semantic passes
     private SymbolTable symbolTable;
+
+    // Store generated TAC instructions
+    private List<TACInstruction> tacInstructions = new ArrayList<>();
 
     public void setInputStream(InputStream inputStream) {
         this.inputStream = inputStream;
@@ -65,5 +71,11 @@ public class CompilerContext {
         return symbolTable;
     }
 
-    // Add fields like tokens, ASTNode, IR, symbol tables, etc. Whatever you need to make your compiler work
+    public void setTACInstructions(List<TACInstruction> instructions) {
+        this.tacInstructions = instructions;
+    }
+
+    public List<TACInstruction> getTACInstructions() {
+        return tacInstructions;
+    }
 }
