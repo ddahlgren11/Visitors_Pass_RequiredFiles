@@ -373,3 +373,98 @@ List<VarDeclNode> ParamList() :
 
     { return params; }
 }
+
+/*
+ ==============================================================================
+                                GRAMMAR README
+ ==============================================================================
+
+ This file (grammar.jj) defines the lexical and syntactic structure of the
+ compiler's source language using JavaCC. It generates a parser (MyParser)
+ that converts source code into an Abstract Syntax Tree (AST).
+
+ ------------------------------------------------------------------------------
+ 1. PARSER CONFIGURATION
+ ------------------------------------------------------------------------------
+ - The parser class is `compiler.frontend.MyParser`.
+ - It is configured to be non-static (`STATIC = false`) to allow multiple instances.
+ - It includes a `main` method that reads from Standard Input, parses the content,
+   and prints the resulting AST (or error messages) to Standard Output.
+
+ ------------------------------------------------------------------------------
+ 2. LEXICAL STRUCTURE (TOKENS)
+ ------------------------------------------------------------------------------
+ The lexer handles skipping and token generation:
+
+ Skipped:
+ - Whitespace: Spaces, tabs, newlines (`\n`, `\r`).
+ - Comments:
+   - Single-line: `// ...`
+   - Multi-line: `/* ... * /`
+
+ Tokens:
+ - Keywords: `if`, `else`, `while`, `for`, `void`, `return`, `int`,
+             `true`, `false`, `null`, `new`, `class`, `public`, `static`, `this`.
+ - Literals:
+   - `INT_LITERAL`: Sequence of digits.
+   - `STRING_LITERAL`: Double-quoted strings.
+ - Operators & Delimiters:
+   - Arithmetic: `+`, `-`, `*`, `/`, `++`, `--`
+   - Relational: `==`, `!=`, `<`, `>`
+   - Logical: `&&`, `||`
+   - Assignment: `=`
+   - Punctuation: `(`, `)`, `{`, `}`, `;`, `,`, `.`
+ - Identifiers:
+   - Starts with a letter or underscore, followed by letters or digits.
+
+ ------------------------------------------------------------------------------
+ 3. SYNTACTIC STRUCTURE (PRODUCTIONS)
+ ------------------------------------------------------------------------------
+ The grammar defines the following productions to build the AST:
+
+ Program:
+ - Entry point `Program()`.
+ - Parses a sequence of statements until EOF.
+ - Returns a `BlockNode`.
+
+ Statements:
+ - `VarDecl`: Variable declaration (e.g., `int x;` or `MyType v = expr;`).
+ - `Assignment`: Assigning a value to an identifier (e.g., `x = 10;`).
+ - `IfStmt`: Conditional execution (`if (cond) { ... } else { ... }`).
+ - `WhileStmt`: While loop (`while (cond) { ... }`).
+ - `ForStmt`: For loop (`for (init; cond; update) { ... }`).
+   - Note: Requires an assignment in the initialization clause.
+ - `Block`: A list of statements enclosed in braces `{ }`.
+ - `FunctionDecl`: Function declaration (e.g., `int add(int a, int b) { ... }`).
+ - `ReturnStmt`: Return statement (`return expr;`).
+ - `ExprStmt`: An expression evaluated for side effects (e.g., `func();`).
+
+ Expressions (Precedence Levels):
+ 1. `LogicalOr` (`||`)
+ 2. `LogicalAnd` (`&&`)
+ 3. `Equality` (`==`, `!=`)
+ 4. `Relational` (`<`, `>`, etc.)
+ 5. `Additive` (`+`, `-`)
+ 6. `Term` (`*`, `/`)
+ 7. `Factor` (Primary expressions):
+    - Literals (`123`, `"text"`, `true`, `null`)
+    - Identifiers (with optional postfix `++` / `--`)
+    - Parenthesized expressions `( expression )`
+
+ ------------------------------------------------------------------------------
+ 4. AST CONSTRUCTION
+ ------------------------------------------------------------------------------
+ The parser constructs nodes from the `compiler.frontend.ast` package:
+ - Control Flow: `IfNode`, `WhileNode`, `ForNode`, `ReturnNode`, `BlockNode`.
+ - Declarations: `VarDeclNode`, `FunctionDeclNode`.
+ - Expressions: `BinaryOpNode`, `UnaryOpNode`, `LiteralNode`, `IdentifierNode`,
+   `AssignmentNode`.
+
+ ------------------------------------------------------------------------------
+ 5. NOTES
+ ------------------------------------------------------------------------------
+ - The `ForStmt` logic currently enforces an assignment in the initialization
+   step and throws an exception if one is not present.
+ - Function parameters are parsed as a comma-separated list of `VarDeclNode`.
+ ==============================================================================
+ */
