@@ -93,10 +93,93 @@ ASTNode Program() :
     ASTNode s;
 }
 {
-    ( s=Statement() { stmts.add(s); } )* <EOF>
+    (
+      LOOKAHEAD(2) s=ClassDecl() { stmts.add(s); }
+    | s=Statement() { stmts.add(s); }
+    )* <EOF>
     {
         return new BlockNode(stmts);
     }
+}
+
+// ---------- Classes ----------
+ClassDeclNode ClassDecl() :
+{
+    Token t;
+    List<VarDeclNode> fields = new ArrayList<>();
+    List<FunctionDeclNode> methods = new ArrayList<>();
+    Token type, name;
+}
+{
+    <CLASS> t=<IDENTIFIER> <LBRACE>
+    (
+        MemberDecl(fields, methods)
+    )*
+    <RBRACE>
+    {
+        return new ClassDeclNode(t.image, fields, methods);
+    }
+}
+
+void MemberDecl(List<VarDeclNode> fields, List<FunctionDeclNode> methods) :
+{
+    Token t;
+    boolean isPublic = false;
+    boolean isStatic = false;
+}
+{
+    ( <PUBLIC> { isPublic = true; } )?
+    ( <STATIC> { isStatic = true; } )?
+
+    (
+        t=<IDENTIFIER>
+        (
+            LOOKAHEAD(<LPAREN>)
+            ConstructorDeclRest(t, methods)
+            |
+            MemberFieldOrMethodRest(t, fields, methods)
+        )
+    |
+        ( t=<INT> | t=<VOID> )
+        MemberFieldOrMethodRest(t, fields, methods)
+    )
+}
+
+void ConstructorDeclRest(Token id, List<FunctionDeclNode> methods) :
+{
+    List<VarDeclNode> params = new ArrayList<>();
+    BlockNode body;
+}
+{
+    <LPAREN> ( params=ParamList() )? <RPAREN> body=Block()
+    {
+        // Treat constructor as a function with special return type same as class name (id.image).
+        methods.add(new FunctionDeclNode(id.image, id.image, params, body));
+    }
+}
+
+void MemberFieldOrMethodRest(Token type, List<VarDeclNode> fields, List<FunctionDeclNode> methods) :
+{
+    Token name;
+    List<VarDeclNode> params = new ArrayList<>();
+    BlockNode body;
+    ExpressionNode initExpr = null;
+}
+{
+    name=<IDENTIFIER>
+    (
+        // Method
+        <LPAREN> ( params=ParamList() )? <RPAREN> body=Block()
+        {
+            methods.add(new FunctionDeclNode(type.image, name.image, params, body));
+        }
+    |
+        // Field
+        ( <ASSIGN> initExpr=Expression() )? <SEMI>
+        {
+            fields.add(new VarDeclNode(type.image, name.image, initExpr));
+        }
+    )
 }
 
 // ---------- Statements ----------
@@ -105,16 +188,35 @@ ASTNode Statement() :
     ASTNode n;
 }
 {
-      LOOKAHEAD(VarDecl()) n=VarDecl()       { return n; }
-    | LOOKAHEAD(Assignment()) n=Assignment() { return n; }
+      LOOKAHEAD( ( <INT> | <IDENTIFIER> ) <IDENTIFIER> ( <ASSIGN> | <SEMI> ) )
+      n=VarDecl()       { return n; }
     | n=IfStmt()        { return n; }
     | n=WhileStmt()     { return n; }
     | n=ForStmt()       { return n; }
     | n=Block()         { return n; }
-    | n=FunctionDecl()  { return n; }
+    | LOOKAHEAD( ( <VOID> | <INT> | <IDENTIFIER> ) <IDENTIFIER> <LPAREN> )
+      n=FunctionDecl()  { return n; }
     | n=ReturnStmt()    { return n; }
-    | n=ExprStmt()      { return n; }
+    | n=ExprOrAssign()  { return n; }
     | <SEMI>            { return new EmptyNode(); }
+}
+
+ASTNode ExprOrAssign() :
+{
+    ExpressionNode lhs;
+    ExpressionNode rhs=null;
+}
+{
+    lhs=Expression()
+    ( <ASSIGN> rhs=Expression() )?
+    <SEMI>
+    {
+        if (rhs == null) {
+            return lhs;
+        } else {
+            return new AssignmentNode(lhs, rhs);
+        }
+    }
 }
 
 // Return
@@ -141,7 +243,7 @@ ASTNode VarDecl() :
     }
 }
 
-// Assignment
+// Assignment (Kept for ForLoop usage if needed, or backward compat)
 AssignmentNode Assignment() :
 {
     Token id; ExpressionNode expr;
@@ -229,17 +331,29 @@ ExpressionNode Term() :
     ExpressionNode left, right; Token op;
 }
 {
-    left = Factor()
-    ( (op=<MULT> | op=<DIV>) right=Factor()
+    left = Unary()
+    ( (op=<MULT> | op=<DIV>) right=Unary()
         { left = new BinaryOpNode(op.image, left, right); }
     )*
     { return left; }
+}
+
+ExpressionNode Unary() :
+{
+    ExpressionNode e; Token op;
+}
+{
+    ( op=<PLUS> | op=<MINUS> ) e=Unary()
+    { return new UnaryOpNode(op.image, e); }
+    |
+    e=Factor() { return e; }
 }
 
 ExpressionNode Factor() :
 {
     Token t; ExpressionNode e;
     ExpressionNode result;
+    List<ExpressionNode> args = new ArrayList<>();
 }
 {
       t=<INT_LITERAL>     { return new LiteralNode(t.image); }
@@ -247,6 +361,9 @@ ExpressionNode Factor() :
     | t=<TRUE>            { return new LiteralNode("true"); }
     | t=<FALSE>           { return new LiteralNode("false"); }
     | t=<NULL>            { return new LiteralNode("null"); }
+
+    | <NEW> t=<IDENTIFIER> <LPAREN> [ args=ArgList() ] <RPAREN>
+      { return new NewExprNode(t.image, args); }
 
     | t=<IDENTIFIER>
       {
@@ -256,20 +373,77 @@ ExpressionNode Factor() :
       (
           <INCR> { result = new UnaryOpNode("post++", new IdentifierNode(t.image)); }
         | <DECR> { result = new UnaryOpNode("post--", new IdentifierNode(t.image)); }
+        | <LPAREN> { args = new ArrayList<>(); } [ args=ArgList() ] <RPAREN>
+          {
+              // Local method call
+              result = new MethodCallNode(null, t.image, args);
+          }
+        |
+          // Method Call or Member Access
+          (
+            <DOT> t=<IDENTIFIER>
+            (
+                <LPAREN> { args = new ArrayList<>(); } [ args=ArgList() ] <RPAREN>
+                {
+                    result = new MethodCallNode(result, t.image, args);
+                }
+            |
+                // Field access
+                {
+                    result = new MemberAccessNode(result, t.image);
+                }
+            )
+          )+
       )?
       { return result; }
 
+    | <THIS>
+      { result = new IdentifierNode("this"); } // Treat 'this' as identifier or create ThisNode?
+      (
+          <DOT> t=<IDENTIFIER>
+            (
+                <LPAREN> { args = new ArrayList<>(); } [ args=ArgList() ] <RPAREN>
+                {
+                    result = new MethodCallNode(result, t.image, args);
+                }
+            |
+                // Field access
+                {
+                    result = new MemberAccessNode(result, t.image);
+                }
+            )
+      )*
+      { return result; }
+
     | <LPAREN> e=Expression() <RPAREN> { return e; }
+}
+
+List<ExpressionNode> ArgList() :
+{
+    List<ExpressionNode> args = new ArrayList<>();
+    ExpressionNode e;
+}
+{
+    e=Expression() { args.add(e); }
+    ( <COMMA> e=Expression() { args.add(e); } )*
+    { return args; }
 }
 
 // ---------- Control Structures ----------
 ASTNode IfStmt() :
 {
     ExpressionNode cond; BlockNode thenBlock, elseBlock=null;
+    ASTNode elseStmt=null;
 }
 {
     <IF> <LPAREN> cond=Expression() <RPAREN> thenBlock=Block()
-    ( <ELSE> elseBlock=Block() )?
+    ( <ELSE>
+      (
+        elseBlock=Block()
+        |
+        elseStmt=IfStmt() { List<ASTNode> l = new ArrayList<>(); l.add(elseStmt); elseBlock = new BlockNode(l); }
+      )
+    )?
     {
         return new IfNode(cond, thenBlock, elseBlock);
     }
@@ -315,10 +489,15 @@ ASTNode ForStmt() :
 }
 {
     <FOR> <LPAREN>
-        [  assignmentinit=AssignmentForLoop() ] <SEMI>
-        [ cond=Expression() ] <SEMI>
-        [ update=Expression() ] <RPAREN>
-        body=Block()
+    (
+        LOOKAHEAD(VarDeclForLoop()) vardeclinit=VarDeclForLoop()
+      |
+        assignmentinit=AssignmentForLoop()
+    )?
+    <SEMI>
+    [ cond=Expression() ] <SEMI>
+    [ update=Expression() ] <RPAREN>
+    body=Block()
     {
         ForNode returnMe =null;
         if (vardeclinit != null) {
@@ -327,8 +506,9 @@ ASTNode ForStmt() :
         else if (assignmentinit != null) {
             returnMe = new ForNode(assignmentinit, cond, update, body);
         }
-        if (returnMe == null) {
-            throw new RuntimeException("Something weird happened");
+        else {
+            // Both null
+            returnMe = new ForNode((VarDeclNode)null, cond, update, body);
         }
 
         return returnMe;
