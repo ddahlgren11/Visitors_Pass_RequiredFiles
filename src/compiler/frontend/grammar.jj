@@ -11,11 +11,21 @@ import java.util.*;
 import compiler.frontend.ast.*;
 
 public class MyParser {
+    private List<String> syntaxErrors = new ArrayList<>();
+
+    public List<String> getSyntaxErrors() {
+        return syntaxErrors;
+    }
+
     public static void main(String[] args) {
         try {
             MyParser parser = new MyParser(System.in);
             ASTNode prog = parser.Program();
             System.out.println(prog.toASTTestTree().toString());
+
+            for (String err : parser.getSyntaxErrors()) {
+                System.err.println("PARSE ERROR: " + err);
+            }
         } catch (TokenMgrError e) {
             // Lexer-level error: illegal character or token
             System.err.println("LEXER ERROR: " + e.getMessage());
@@ -24,11 +34,28 @@ public class MyParser {
             System.err.println("PARSE ERROR: " + e.getMessage());
         }
     }
-        /*public MyParser(java.io.Reader reader) {
-            this(new SimpleCharStream(reader, 1, 1));
-        }
-        */
+
+    private void recover(ParseException e, int... skipTo) {
+        syntaxErrors.add(e.getMessage());
+        Token t;
+        do {
+            t = getToken(1);
+            if (t.kind == EOF) break;
+            for (int k : skipTo) {
+                if (t.kind == k) {
+                    // Found sync token.
+                    // If it is SEMI, consume it to avoid infinite loop in loops that don't handle stray SEMI.
+                    // If it is RBRACE, do NOT consume it, let the loop termination condition handle it.
+                    if (k == SEMI) {
+                        getNextToken();
+                    }
+                    return;
+                }
+            }
+            getNextToken(); // Consume garbage
+        } while (true);
     }
+}
 
 
 PARSER_END(MyParser)
@@ -57,6 +84,8 @@ TOKEN : { < THIS: "this" > }
 
 TOKEN : { < INT_LITERAL: (["0"-"9"])+ > }
 TOKEN : { < STRING_LITERAL: "\"" (~["\"","\\"])* "\"" > }
+// Catch-all for malformed strings (unclosed before newline)
+TOKEN : { < BAD_STRING: "\"" (~["\"","\\","\n","\r"])* > }
 
 TOKEN : { < EQ: "==" > }
 TOKEN : { < ASSIGN: "=" > }
@@ -87,6 +116,10 @@ TOKEN : {
 |
     < #DIGIT: ["0"-"9"] >
 }
+
+// Catch-all for illegal characters. Must be last.
+TOKEN : { < UNEXPECTED_CHAR: ~[] > }
+
 // ---------- Program ----------
 ASTNode Program() :
 {
@@ -113,13 +146,21 @@ ClassDeclNode ClassDecl() :
 {
     <CLASS> t=<IDENTIFIER> <LBRACE>
     (
-        LOOKAHEAD( ( <INT> | <IDENTIFIER> ) <IDENTIFIER> ( <SEMI> | <ASSIGN> ) )
-        member=VarDecl() { fields.add((VarDeclNode)member); }
-      |
-        LOOKAHEAD(ConstructorDecl())
-        member=ConstructorDecl() { methods.add((FunctionDeclNode)member); }
-      |
-        member=FunctionDecl() { methods.add((FunctionDeclNode)member); }
+      try {
+        (
+            LOOKAHEAD( ( <INT> | <IDENTIFIER> ) <IDENTIFIER> ( <SEMI> | <ASSIGN> ) )
+            member=VarDecl() { fields.add((VarDeclNode)member); }
+          |
+            LOOKAHEAD(ConstructorDecl())
+            member=ConstructorDecl() { methods.add((FunctionDeclNode)member); }
+          |
+            member=FunctionDecl() { methods.add((FunctionDeclNode)member); }
+          |
+            <SEMI> // Allow extra semicolons in class body to prevent loop if recover doesn't consume it, or just for robustness
+        )
+      } catch (ParseException e) {
+        recover(e, SEMI, RBRACE);
+      }
     )*
     <RBRACE>
     {
@@ -143,19 +184,26 @@ FunctionDeclNode ConstructorDecl() :
 // ---------- Statements ----------
 ASTNode Statement() :
 {
-    ASTNode n;
+    ASTNode n = new EmptyNode();
 }
 {
-      LOOKAHEAD( ( <INT> | <IDENTIFIER> ) <IDENTIFIER> ( <SEMI> | <ASSIGN> ) ) n=VarDecl() { return n; }
-    | LOOKAHEAD( <IDENTIFIER> <ASSIGN> ) n=Assignment() { return n; }
-    | n=IfStmt()        { return n; }
-    | n=WhileStmt()     { return n; }
-    | n=ForStmt()       { return n; }
-    | n=Block()         { return n; }
-    | LOOKAHEAD(FunctionDecl()) n=FunctionDecl()  { return n; }
-    | n=ReturnStmt()    { return n; }
-    | n=ExprOrAssignStmt() { return n; }
-    | <SEMI>            { return new EmptyNode(); }
+    try {
+        (
+              LOOKAHEAD( ( <INT> | <IDENTIFIER> ) <IDENTIFIER> ( <SEMI> | <ASSIGN> ) ) n=VarDecl() { return n; }
+            | LOOKAHEAD( <IDENTIFIER> <ASSIGN> ) n=Assignment() { return n; }
+            | n=IfStmt()        { return n; }
+            | n=WhileStmt()     { return n; }
+            | n=ForStmt()       { return n; }
+            | n=Block()         { return n; }
+            | LOOKAHEAD(FunctionDecl()) n=FunctionDecl()  { return n; }
+            | n=ReturnStmt()    { return n; }
+            | n=ExprOrAssignStmt() { return n; }
+            | <SEMI>            { return new EmptyNode(); }
+        )
+    } catch (ParseException e) {
+        recover(e, SEMI);
+        return new EmptyNode();
+    }
 }
 
 ASTNode ExprOrAssignStmt() :
@@ -429,22 +477,7 @@ ASTNode ForStmt() :
         else if (assignmentinit != null) {
             returnMe = new ForNode(assignmentinit, cond, update, body);
         }
-        // Handle empty init? ForNode requires init?
-        // If both null, we might need a ForNode that accepts null init, or EmptyNode?
-        // The AST definition implies StatementNode init.
-        // I will assume one is required or I create an EmptyNode wrapper?
-        // But ForNode constructor takes StatementNode.
         if (returnMe == null) {
-             // throw new RuntimeException("For loop init required");
-             // Actually, if both are null, we can pass null?
-             // Checking ForNode.java: constructor: public ForNode(StatementNode init, ExpressionNode condition, ExpressionNode update, StatementNode body)
-             // So it expects StatementNode.
-             // If nothing provided, we should probably pass a dummy EmptyNode or null if it handles it.
-             // I'll assume null is allowed or create EmptyNode.
-             // However, `[ ... ]` makes it optional in grammar.
-             // If neither matches, it is null.
-             // I'll pass null for now, hoping ForNode handles it or I check.
-             // Actually, ForNode extends StatementNode.
              returnMe = new ForNode((StatementNode)null, cond, update, body);
         }
 
