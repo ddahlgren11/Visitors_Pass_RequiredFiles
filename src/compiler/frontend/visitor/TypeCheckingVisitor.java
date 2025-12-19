@@ -215,6 +215,9 @@ public class TypeCheckingVisitor implements ASTVisitor {
 
     @Override
     public void visitBinaryExprNode(BinaryExprNode node) {
+        // This node type appears to be unused by the grammar (which uses BinaryOpNode).
+        // However, we implement it for completeness or if AST structure changes.
+        // Logic mirrors visitBinaryOpNode.
         node.getLeft().accept(this);
         node.getRight().accept(this);
 
@@ -224,9 +227,8 @@ public class TypeCheckingVisitor implements ASTVisitor {
         if (leftType == null || rightType == null) return;
 
         String op = node.getOp();
-        switch (op) {
-            case "+": case "-": case "*": case "/":
-                if (isNumeric(leftType) && isNumeric(rightType)) {
+        if (op.equals("+") || op.equals("-") || op.equals("*") || op.equals("/")) {
+             if (isNumeric(leftType) && isNumeric(rightType)) {
                     setType(node, "int");
                 } else if (op.equals("+") && (leftType.equals("String") || rightType.equals("String"))) {
                     setType(node, "String"); // String concatenation
@@ -234,33 +236,29 @@ public class TypeCheckingVisitor implements ASTVisitor {
                     diag.addError("Operator " + op + " requires numeric operands.");
                     setType(node, "int"); // Fallback
                 }
-                break;
-            case "<": case ">": case "<=": case ">=":
-                if (isNumeric(leftType) && isNumeric(rightType)) {
+        } else if (op.equals("<") || op.equals(">") || op.equals("<=") || op.equals(">=")) {
+             if (isNumeric(leftType) && isNumeric(rightType)) {
                     setType(node, "boolean");
                 } else {
                     diag.addError("Operator " + op + " requires numeric operands.");
                     setType(node, "boolean");
                 }
-                break;
-            case "&&": case "||":
-                if (isBoolean(leftType) && isBoolean(rightType)) {
+        } else if (op.equals("&&") || op.equals("||")) {
+             if (isBoolean(leftType) && isBoolean(rightType)) {
                     setType(node, "boolean");
                 } else {
                     diag.addError("Operator " + op + " requires boolean operands.");
                     setType(node, "boolean");
                 }
-                break;
-            case "==": case "!=":
-                if (isCompatible(leftType, rightType) || isCompatible(rightType, leftType)) {
+        } else if (op.equals("==") || op.equals("!=")) {
+             if (isCompatible(leftType, rightType) || isCompatible(rightType, leftType)) {
                     setType(node, "boolean");
                 } else {
                     diag.addError("Operator " + op + " requires compatible operands.");
                     setType(node, "boolean");
                 }
-                break;
-            default:
-                setType(node, "unknown");
+        } else {
+            setType(node, "unknown");
         }
     }
 

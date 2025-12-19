@@ -1,0 +1,19 @@
+class Point {
+  int x;
+  int y;
+
+  void init(int a, int b) {
+    this.x = a;
+    this.y = b;
+  }
+
+  int sum() {
+    return this.x + this.y;
+  }
+}
+
+void main() {
+  Point p = new Point();
+  p.init(10, 20);
+  int s = p.sum();
+}

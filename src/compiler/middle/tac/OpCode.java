@@ -11,5 +11,25 @@ public enum OpCode {
     RETURN,
     LABEL,
     GOTO,
-    IFZ
+    IFZ,
+    PARAM,
+    CALL,          // Generic call, deprecated in favor of specific ones if possible, or used for dynamic
+    CALL_STATIC,
+    CALL_VIRTUAL,
+    NEW,
+    GET_FIELD,
+    PUT_FIELD,
+    EQ,
+    NEQ,
+    LT,
+    LE,
+    GT,
+    GE,
+    AND,
+    OR,
+    NOT,
+    NEG,
+    FUNC_ENTRY,
+    FUNC_EXIT,
+    PARAM_DECL     // For declaring a parameter in a function body
 }

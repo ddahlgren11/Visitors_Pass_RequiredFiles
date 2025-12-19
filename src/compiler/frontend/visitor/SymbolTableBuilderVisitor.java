@@ -66,7 +66,14 @@ public class SymbolTableBuilderVisitor implements ASTVisitor {
         }
         table.enterScope();
         for (VarDeclNode param : node.getParams()) {
-            param.accept(this);
+             // Params are like variables in local scope
+             Symbol paramSym = new Symbol(param.name, Kind.PARAMETER, param);
+             if (!table.declare(paramSym)) {
+                 diag.addError("Duplicate parameter: " + param.name);
+             }
+            // We do NOT call param.accept(this) because visitVarDeclNode would
+            // try to declare it again as Kind.VARIABLE.
+            // Although visitVarDeclNode uses Kind.VARIABLE, we want Kind.PARAMETER.
         }
         node.getBody().accept(this);
         table.exitScope();
