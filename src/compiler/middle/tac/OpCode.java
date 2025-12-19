@@ -31,5 +31,6 @@ public enum OpCode {
     NEG,
     FUNC_ENTRY,
     FUNC_EXIT,
-    PARAM_DECL     // For declaring a parameter in a function body
+    PARAM_DECL,    // For declaring a parameter in a function body
+    FIELD_DECL     // For declaring a class field
 }
