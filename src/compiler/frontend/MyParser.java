@@ -96,7 +96,7 @@ stmts.add(s);
     }
     jj_consume_token(0);
 {if ("" != null) return new BlockNode(stmts);}
-    throw new ParseException("Missing return statement in function");
+    throw new Error("Missing return statement in function");
 }
 
   final public ClassDeclNode ClassDecl() throws ParseException {Token t;
@@ -147,7 +147,7 @@ methods.add((FunctionDeclNode)member);
     }
     jj_consume_token(RBRACE);
 {if ("" != null) return new ClassDeclNode(t.image, fields, methods);}
-    throw new ParseException("Missing return statement in function");
+    throw new Error("Missing return statement in function");
 }
 
   final public FunctionDeclNode ConstructorDecl() throws ParseException {Token id; List<VarDeclNode> params = new ArrayList<>(); BlockNode body;
@@ -193,7 +193,7 @@ methods.add((FunctionDeclNode)member);
     jj_consume_token(RPAREN);
     body = Block();
 {if ("" != null) return new FunctionDeclNode(id.image, id.image, params, body);}
-    throw new ParseException("Missing return statement in function");
+    throw new Error("Missing return statement in function");
 }
 
 // ---------- Statements ----------
@@ -267,7 +267,7 @@ methods.add((FunctionDeclNode)member);
         }
       }
     }
-    throw new ParseException("Missing return statement in function");
+    throw new Error("Missing return statement in function");
 }
 
   final public ASTNode ExprOrAssignStmt() throws ParseException {ExpressionNode e; ExpressionNode rhs=null;
@@ -285,7 +285,7 @@ methods.add((FunctionDeclNode)member);
     jj_consume_token(SEMI);
 if (rhs != null) {if ("" != null) return new AssignmentNode(e, rhs);}
         {if ("" != null) return e;}
-    throw new ParseException("Missing return statement in function");
+    throw new Error("Missing return statement in function");
 }
 
 // Return
@@ -313,7 +313,7 @@ if (rhs != null) {if ("" != null) return new AssignmentNode(e, rhs);}
     }
     jj_consume_token(SEMI);
 {if ("" != null) return new ReturnNode(expr);}
-    throw new ParseException("Missing return statement in function");
+    throw new Error("Missing return statement in function");
 }
 
 // Declaration
@@ -345,7 +345,7 @@ if (rhs != null) {if ("" != null) return new AssignmentNode(e, rhs);}
     }
     jj_consume_token(SEMI);
 {if ("" != null) return new VarDeclNode(t.image, id.image, expr);}
-    throw new ParseException("Missing return statement in function");
+    throw new Error("Missing return statement in function");
 }
 
 // Assignment
@@ -355,7 +355,7 @@ if (rhs != null) {if ("" != null) return new AssignmentNode(e, rhs);}
     expr = Expression();
     jj_consume_token(SEMI);
 {if ("" != null) return new AssignmentNode(new IdentifierNode(id.image), expr);}
-    throw new ParseException("Missing return statement in function");
+    throw new Error("Missing return statement in function");
 }
 
 // Expr stmt
@@ -363,14 +363,14 @@ if (rhs != null) {if ("" != null) return new AssignmentNode(e, rhs);}
     e = Expression();
     jj_consume_token(SEMI);
 {if ("" != null) return e;}
-    throw new ParseException("Missing return statement in function");
+    throw new Error("Missing return statement in function");
 }
 
 // ---------- Expressions ----------
   final public ExpressionNode Expression() throws ParseException {ExpressionNode n;
     n = LogicalOr();
 {if ("" != null) return n;}
-    throw new ParseException("Missing return statement in function");
+    throw new Error("Missing return statement in function");
 }
 
   final public ExpressionNode LogicalOr() throws ParseException {ExpressionNode left, right; Token op;
@@ -391,7 +391,7 @@ if (rhs != null) {if ("" != null) return new AssignmentNode(e, rhs);}
 left = new BinaryOpNode(op.image, left, right);
     }
 {if ("" != null) return left;}
-    throw new ParseException("Missing return statement in function");
+    throw new Error("Missing return statement in function");
 }
 
   final public ExpressionNode LogicalAnd() throws ParseException {ExpressionNode left, right; Token op;
@@ -412,7 +412,7 @@ left = new BinaryOpNode(op.image, left, right);
 left = new BinaryOpNode(op.image, left, right);
     }
 {if ("" != null) return left;}
-    throw new ParseException("Missing return statement in function");
+    throw new Error("Missing return statement in function");
 }
 
   final public ExpressionNode Equality() throws ParseException {ExpressionNode left, right; Token op;
@@ -447,7 +447,7 @@ left = new BinaryOpNode(op.image, left, right);
 left = new BinaryOpNode(op.image, left, right);
     }
 {if ("" != null) return left;}
-    throw new ParseException("Missing return statement in function");
+    throw new Error("Missing return statement in function");
 }
 
   final public ExpressionNode Relational() throws ParseException {ExpressionNode left, right; Token op;
@@ -482,7 +482,7 @@ left = new BinaryOpNode(op.image, left, right);
 left = new BinaryOpNode(op.image, left, right);
     }
 {if ("" != null) return left;}
-    throw new ParseException("Missing return statement in function");
+    throw new Error("Missing return statement in function");
 }
 
   final public ExpressionNode Additive() throws ParseException {ExpressionNode left, right; Token op;
@@ -517,7 +517,7 @@ left = new BinaryOpNode(op.image, left, right);
 left = new BinaryOpNode(op.image, left, right);
     }
 {if ("" != null) return left;}
-    throw new ParseException("Missing return statement in function");
+    throw new Error("Missing return statement in function");
 }
 
   final public ExpressionNode Term() throws ParseException {ExpressionNode left, right; Token op;
@@ -552,7 +552,7 @@ left = new BinaryOpNode(op.image, left, right);
 left = new BinaryOpNode(op.image, left, right);
     }
 {if ("" != null) return left;}
-    throw new ParseException("Missing return statement in function");
+    throw new Error("Missing return statement in function");
 }
 
   final public ExpressionNode UnaryExpression() throws ParseException {ExpressionNode e; Token op;
@@ -600,7 +600,7 @@ left = new BinaryOpNode(op.image, left, right);
       jj_consume_token(-1);
       throw new ParseException();
     }
-    throw new ParseException("Missing return statement in function");
+    throw new Error("Missing return statement in function");
 }
 
   final public ExpressionNode Factor() throws ParseException {ExpressionNode n; Token t; List<ExpressionNode> args = null;
@@ -750,7 +750,7 @@ n = new UnaryOpNode("post--", n);
       }
     }
 {if ("" != null) return n;}
-    throw new ParseException("Missing return statement in function");
+    throw new Error("Missing return statement in function");
 }
 
   final public ExpressionNode NewExpr() throws ParseException {Token t; List<ExpressionNode> args = new ArrayList<>();
@@ -779,7 +779,7 @@ n = new UnaryOpNode("post--", n);
     }
     jj_consume_token(RPAREN);
 {if ("" != null) return new NewExprNode(t.image, args);}
-    throw new ParseException("Missing return statement in function");
+    throw new Error("Missing return statement in function");
 }
 
   final public List<ExpressionNode> ArgList() throws ParseException {List<ExpressionNode> args = new ArrayList<>();
@@ -802,7 +802,7 @@ args.add(e);
 args.add(e);
     }
 {if ("" != null) return args;}
-    throw new ParseException("Missing return statement in function");
+    throw new Error("Missing return statement in function");
 }
 
 // ---------- Control Structures ----------
@@ -836,7 +836,7 @@ args.add(e);
       ;
     }
 {if ("" != null) return new IfNode(cond, thenBlock, elseBlock);}
-    throw new ParseException("Missing return statement in function");
+    throw new Error("Missing return statement in function");
 }
 
   final public ASTNode WhileStmt() throws ParseException {ExpressionNode cond; BlockNode body;
@@ -846,7 +846,7 @@ args.add(e);
     jj_consume_token(RPAREN);
     body = Block();
 {if ("" != null) return new WhileNode(cond, body);}
-    throw new ParseException("Missing return statement in function");
+    throw new Error("Missing return statement in function");
 }
 
 // Productions for for-loop
@@ -877,7 +877,7 @@ args.add(e);
       ;
     }
 {if ("" != null) return new VarDeclNode(t.image, id.image, expr);}
-    throw new ParseException("Missing return statement in function");
+    throw new Error("Missing return statement in function");
 }
 
   final public AssignmentNode AssignmentForLoop() throws ParseException {Token id; ExpressionNode expr;
@@ -885,7 +885,7 @@ args.add(e);
     jj_consume_token(ASSIGN);
     expr = Expression();
 {if ("" != null) return new AssignmentNode(new IdentifierNode(id.image), expr);}
-    throw new ParseException("Missing return statement in function");
+    throw new Error("Missing return statement in function");
 }
 
   final public ASTNode ForStmt() throws ParseException {ExpressionNode cond=null, update=null; BlockNode body; VarDeclNode vardeclinit=null; AssignmentNode assignmentinit=null;
@@ -985,7 +985,7 @@ ForNode returnMe =null;
         }
 
         {if ("" != null) return returnMe;}
-    throw new ParseException("Missing return statement in function");
+    throw new Error("Missing return statement in function");
 }
 
   final public BlockNode Block() throws ParseException {List<ASTNode> stmts = new ArrayList<>(); ASTNode s;
@@ -1027,7 +1027,7 @@ stmts.add(s);
     }
     jj_consume_token(RBRACE);
 {if ("" != null) return new BlockNode(stmts);}
-    throw new ParseException("Missing return statement in function");
+    throw new Error("Missing return statement in function");
 }
 
   final public ASTNode FunctionDecl() throws ParseException {Token t; Token id; List<VarDeclNode> params = new ArrayList<>(); BlockNode body;
@@ -1091,7 +1091,7 @@ stmts.add(s);
     jj_consume_token(RPAREN);
     body = Block();
 {if ("" != null) return new FunctionDeclNode(t.image, id.image, params, body);}
-    throw new ParseException("Missing return statement in function");
+    throw new Error("Missing return statement in function");
 }
 
   final public List<VarDeclNode> ParamList() throws ParseException {List<VarDeclNode> params = new ArrayList<>();
@@ -1142,7 +1142,7 @@ params.add(new VarDeclNode(t.image, id.image, null));
 params.add(new VarDeclNode(t.image, id.image, null));
     }
 {if ("" != null) return params;}
-    throw new ParseException("Missing return statement in function");
+    throw new Error("Missing return statement in function");
 }
 
   private boolean jj_2_1(int xla)
