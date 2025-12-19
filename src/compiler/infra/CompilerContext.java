@@ -17,6 +17,16 @@ public class CompilerContext {
     private ASTNode ast;
     // optional symbol table built by semantic passes
     private SymbolTable symbolTable;
+    // TAC instructions
+    private java.util.List<compiler.middle.tac.TACInstruction> tacInstructions;
+
+    public void setTacInstructions(java.util.List<compiler.middle.tac.TACInstruction> instructions) {
+        this.tacInstructions = instructions;
+    }
+
+    public java.util.List<compiler.middle.tac.TACInstruction> getTacInstructions() {
+        return tacInstructions;
+    }
 
     public void setInputStream(InputStream inputStream) {
         this.inputStream = inputStream;

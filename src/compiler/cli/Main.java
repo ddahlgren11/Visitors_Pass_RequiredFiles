@@ -3,6 +3,8 @@ package compiler.cli;
 import compiler.frontend.FrontEndPass;
 import compiler.frontend.SymbolTableBuilderPass;
 import compiler.frontend.TypeCheckingPass;
+import compiler.middle.tac.TACConversionPass;
+import compiler.backend.BytecodeGeneratorPass;
 import compiler.infra.CompilerContext;
 import compiler.infra.CompilerOrchestrator;
 import compiler.infra.CompilerPass;
@@ -39,6 +41,8 @@ public class Main {
             orchestrator.addPass(new FrontEndPass());
             orchestrator.addPass(new SymbolTableBuilderPass());
             orchestrator.addPass(new TypeCheckingPass());
+            orchestrator.addPass(new TACConversionPass());
+            orchestrator.addPass(new BytecodeGeneratorPass());
 
             // Run the compiler passes
             orchestrator.runPasses(context);
