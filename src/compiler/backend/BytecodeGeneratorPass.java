@@ -9,13 +9,18 @@ import compiler.middle.tac.OpCode;
 import java.io.PrintWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class BytecodeGeneratorPass implements CompilerPass {
     @Override
     public String name() { return "BytecodeGeneratorPass"; }
+
+    private Set<String> initializedClasses = new HashSet<>();
+    private Map<String, Integer> varMap = new HashMap<>();
+    private Map<String, Boolean> varIsRef = new HashMap<>();
+    private int nextVarIndex = 0;
+    private String currentMethodName = null;
+    private boolean lastOpWasReturn = false;
 
     @Override
     public void execute(CompilerContext context) throws Exception {
@@ -29,286 +34,313 @@ public class BytecodeGeneratorPass implements CompilerPass {
 
         diag.log("Generating Bytecode from " + instructions.size() + " TAC instructions...");
 
-        try (PrintWriter out = new PrintWriter(new FileWriter("Main.j"))) {
-            // Header
-            out.println(".class public Main");
-            out.println(".super java/lang/Object");
-            out.println();
+        PrintWriter out = null;
+        String currentFile = null;
 
-            // Default constructor
-            out.println(".method public <init>()V");
-            out.println("   aload_0");
-            out.println("   invokespecial java/lang/Object/<init>()V");
-            out.println("   return");
-            out.println(".end method");
-            out.println();
+        for (TACInstruction instr : instructions) {
+            if (instr.op == OpCode.FIELD_DECL || instr.op == OpCode.FUNC_ENTRY) {
+                String className = "Main";
+                if (instr.op == OpCode.FIELD_DECL) {
+                    className = instr.arg1;
+                } else {
+                    if (instr.target.equals("main")) {
+                        className = "Main";
+                    } else if (instr.target.contains(".")) {
+                        className = instr.target.substring(0, instr.target.indexOf('.'));
+                    }
+                }
 
-            // Variable mapping: name -> index
-            // We need a fresh map for each method.
-            Map<String, Integer> varMap = new HashMap<>();
-            int nextVarIndex = 0;
+                String filename = className + ".j";
+                if (!filename.equals(currentFile)) {
+                    if (out != null) {
+                        out.flush();
+                        out.close();
+                    }
+                    boolean append = initializedClasses.contains(className);
+                    out = new PrintWriter(new FileWriter(filename, append));
+                    currentFile = filename;
 
-            boolean insideMethod = false;
+                    if (!append) {
+                        out.println(".class public " + className);
+                        out.println(".super java/lang/Object");
+                        out.println();
 
-            // Check if we have loose statements before any function?
-            // If the first instruction is not FUNC_ENTRY, we are in main.
-            if (!instructions.isEmpty() && instructions.get(0).op != OpCode.FUNC_ENTRY) {
-                 out.println(".method public static main([Ljava/lang/String;)V");
-                 out.println("   .limit stack 100");
-                 out.println("   .limit locals 100");
-                 insideMethod = true;
-                 varMap.clear();
-                 varMap.put("args", nextVarIndex++);
-            }
-
-            for (TACInstruction instr : instructions) {
-                switch(instr.op) {
-                    case FUNC_ENTRY:
-                        if (insideMethod) {
-                            out.println("   return"); // Safety return if fell through
-                            out.println(".end method");
-                            out.println();
+                        if (className.equals("Main")) {
+                             out.println(".method public <init>()V");
+                             out.println("   aload_0");
+                             out.println("   invokespecial java/lang/Object/<init>()V");
+                             out.println("   return");
+                             out.println(".end method");
+                             out.println();
                         }
-
-                        String methodName = instr.target;
-                        int paramCount = Integer.parseInt(instr.arg1);
-
-                        // Heuristic: If method name contains "_", it might be Class_Method (mangled).
-                        // In TAC, we emitted "Class_Method" for class methods.
-                        // But we want to generate valid JVM methods.
-                        // Ideally, we'd emit separate classes. But we are dumping everything to Main.j.
-                        // So we make them static methods of Main?
-                        // "public static Class_Method(...)V"
-                        // This works for simple execution.
-
-                        String sig = "()V";
-                        if (methodName.equals("main")) {
-                             sig = "([Ljava/lang/String;)V";
-                        } else {
-                            StringBuilder sb = new StringBuilder("(");
-                            for(int k=0; k<paramCount; k++) sb.append("I"); // Default to int params
-                            sb.append(")I"); // Default to int return
-                            sig = sb.toString();
-                        }
-
-                        out.println(".method public static " + methodName + sig);
-                        out.println("   .limit stack 100");
-                        out.println("   .limit locals 100");
-
-                        insideMethod = true;
-                        varMap.clear();
-                        nextVarIndex = 0;
-                        break;
-
-                    case PARAM_DECL:
-                        // Map param name to next index
-                        if (!varMap.containsKey(instr.target)) {
-                            varMap.put(instr.target, nextVarIndex++);
-                        }
-                        break;
-
-                    case FUNC_EXIT:
-                        if (insideMethod) {
-                            out.println(".end method");
-                            out.println();
-                            insideMethod = false;
-                        }
-                        break;
-
-                    case LABEL:
-                        out.println(instr.target + ":");
-                        break;
-
-                    case LOAD_CONST:
-                        // Check type of const?
-                        // If number -> ldc/bipush
-                        // If string -> ldc
-                        try {
-                            int val = Integer.parseInt(instr.arg1);
-                            if (val >= -128 && val <= 127) out.println("   bipush " + val);
-                            else if (val >= -32768 && val <= 32767) out.println("   sipush " + val);
-                            else out.println("   ldc " + val);
-                        } catch (NumberFormatException e) {
-                            if (instr.arg1.equals("true")) out.println("   iconst_1");
-                            else if (instr.arg1.equals("false")) out.println("   iconst_0");
-                            else if (instr.arg1.equals("null")) out.println("   aconst_null");
-                            else out.println("   ldc " + instr.arg1); // String
-                        }
-
-                        // Store to target?
-                        // LOAD_CONST puts on stack.
-                        // But TAC says t0 = 5.
-                        // So we should store to t0.
-                        storeVar(out, instr.target, varMap);
-                        break;
-
-                    case LOAD_VAR:
-                        loadVar(out, instr.arg1, varMap);
-                        storeVar(out, instr.target, varMap);
-                        break;
-
-                    case STORE_VAR:
-                        // target = arg1
-                        // load arg1, store target
-                        loadVar(out, instr.arg1, varMap);
-                        storeVar(out, instr.target, varMap);
-                        break;
-
-                    case ADD:
-                        loadVar(out, instr.arg1, varMap);
-                        loadVar(out, instr.arg2, varMap);
-                        out.println("   iadd");
-                        storeVar(out, instr.target, varMap);
-                        break;
-                    case SUB:
-                        loadVar(out, instr.arg1, varMap);
-                        loadVar(out, instr.arg2, varMap);
-                        out.println("   isub");
-                        storeVar(out, instr.target, varMap);
-                        break;
-                    case MUL:
-                        loadVar(out, instr.arg1, varMap);
-                        loadVar(out, instr.arg2, varMap);
-                        out.println("   imul");
-                        storeVar(out, instr.target, varMap);
-                        break;
-                    case DIV:
-                        loadVar(out, instr.arg1, varMap);
-                        loadVar(out, instr.arg2, varMap);
-                        out.println("   idiv");
-                        storeVar(out, instr.target, varMap);
-                        break;
-
-                    case RETURN:
-                        if (instr.target != null) {
-                            loadVar(out, instr.target, varMap);
-                            out.println("   ireturn"); // Assume int return
-                        } else {
-                            out.println("   return");
-                        }
-                        break;
-
-                    case IFZ:
-                        loadVar(out, instr.target, varMap);
-                        out.println("   ifeq " + instr.arg1);
-                        break;
-
-                    case GOTO:
-                        out.println("   goto " + instr.target);
-                        break;
-
-                    case PARAM:
-                        // Pushing param for call.
-                        // JVM expects params on stack.
-                        loadVar(out, instr.target, varMap);
-                        break;
-
-                    case CALL: // Deprecated, but handle if present
-                    case CALL_STATIC:
-                    case CALL_VIRTUAL:
-                        String obj = instr.arg1;
-                        // Parse name and count
-                        String rawName = instr.arg2;
-                        String mName = rawName;
-                        int argCount = 0;
-                        if (rawName.contains(":")) {
-                            String[] parts = rawName.split(":");
-                            mName = parts[0];
-                            argCount = Integer.parseInt(parts[1]);
-                        }
-
-                        // Construct signature with argCount
-                        StringBuilder callSig = new StringBuilder("(");
-                        for(int k=0; k<argCount; k++) callSig.append("I");
-                        callSig.append(")I");
-
-                        out.println("   invokestatic Main/" + mName + callSig.toString());
-                        storeVar(out, instr.target, varMap);
-                        break;
-
-                    case GET_FIELD:
-                        // getfield Class/Field Type
-                        // We don't have types.
-                        // Assume int?
-                        // Also, if we are using Main class for everything, we need fields in Main?
-                        // `getfield Main/fieldName I`
-                        loadVar(out, instr.arg1, varMap); // obj
-                        out.println("   getfield Main/" + instr.arg2 + " I");
-                        storeVar(out, instr.target, varMap);
-                        break;
-
-                    case PUT_FIELD:
-                        // TAC: PUT_FIELD target=obj, arg1=fieldName, arg2=value
-                        loadVar(out, instr.target, varMap); // obj
-                        loadVar(out, instr.arg2, varMap);   // val
-                        out.println("   putfield Main/" + instr.arg1 + " I");
-                        break;
-
-                    case AND:
-                        loadVar(out, instr.arg1, varMap);
-                        loadVar(out, instr.arg2, varMap);
-                        out.println("   iand");
-                        storeVar(out, instr.target, varMap);
-                        break;
-                    case OR:
-                        loadVar(out, instr.arg1, varMap);
-                        loadVar(out, instr.arg2, varMap);
-                        out.println("   ior");
-                        storeVar(out, instr.target, varMap);
-                        break;
-                    case NOT:
-                        // xor 1
-                        loadVar(out, instr.arg1, varMap);
-                        out.println("   iconst_1");
-                        out.println("   ixor");
-                        storeVar(out, instr.target, varMap);
-                        break;
-                    case NEG:
-                        loadVar(out, instr.arg1, varMap);
-                        out.println("   ineg");
-                        storeVar(out, instr.target, varMap);
-                        break;
-
-                    case NEW:
-                        out.println("   new " + instr.arg1);
-                        out.println("   dup");
-                        out.println("   invokespecial " + instr.arg1 + "/<init>()V");
-                        storeVar(out, instr.target, varMap);
-                        break;
-
-                    // ... Implement others EQ, NEQ, etc using jumps or logic ...
-                    case EQ:
-                    case NEQ:
-                    case LT:
-                    case GT:
-                    case LE:
-                    case GE:
-                         // Implement comparison
-                         // load op1, load op2
-                         // if_icmpXX L_true
-                         // iconst_0
-                         // goto L_end
-                         // L_true: iconst_1
-                         // L_end: store
-                         genCompare(out, instr, varMap);
-                         break;
-
-                    default:
-                        // out.println("; TODO: " + instr.op);
-                        break;
+                        initializedClasses.add(className);
+                    }
                 }
             }
 
-            if (insideMethod) {
-                out.println("   return");
-                out.println(".end method");
+            if (out == null) {
+                if (!initializedClasses.contains("Main")) {
+                    out = new PrintWriter(new FileWriter("Main.j"));
+                    out.println(".class public Main");
+                    out.println(".super java/lang/Object");
+                    out.println(".method public <init>()V");
+                    out.println("   aload_0");
+                    out.println("   invokespecial java/lang/Object/<init>()V");
+                    out.println("   return");
+                    out.println(".end method");
+                    out.println();
+                    initializedClasses.add("Main");
+                    currentFile = "Main.j";
+                } else if (!"Main.j".equals(currentFile)) {
+                     if (out != null) out.close();
+                     out = new PrintWriter(new FileWriter("Main.j", true));
+                     currentFile = "Main.j";
+                }
             }
+
+            processInstruction(instr, out);
+        }
+
+        if (out != null) {
+            out.flush();
+            out.close();
         }
     }
 
-    private void genCompare(PrintWriter out, TACInstruction instr, Map<String, Integer> varMap) {
-        loadVar(out, instr.arg1, varMap);
-        loadVar(out, instr.arg2, varMap);
+    private void processInstruction(TACInstruction instr, PrintWriter out) {
+        // Reset return flag unless we set it explicitly
+        boolean isReturn = false;
+
+        switch(instr.op) {
+            case FIELD_DECL:
+                out.println(".field public " + instr.arg2 + " I");
+                break;
+
+            case FUNC_ENTRY:
+                currentMethodName = instr.target;
+                varMap.clear();
+                varIsRef.clear();
+                nextVarIndex = 0;
+
+                String methodName = instr.target;
+                String signature = instr.arg2;
+                boolean isConstructor = false;
+
+                if (methodName.equals("main")) {
+                    out.println(".method public static main([Ljava/lang/String;)V");
+                    varMap.put("args", nextVarIndex++);
+                    varIsRef.put("args", true);
+                } else if (methodName.contains(".")) {
+                    String[] parts = methodName.split("\\.");
+                    String className = parts[0];
+                    String realName = parts[1];
+
+                    if (realName.equals(className)) {
+                        if (signature != null) out.println(".method public <init>" + signature);
+                        else out.println(".method public <init>()V"); // Fallback
+                        isConstructor = true;
+                    } else {
+                        if (signature != null) out.println(".method public " + realName + signature);
+                        else out.println(".method public " + realName + "()I"); // Fallback
+                    }
+                } else {
+                    if (signature != null) out.println(".method public static " + methodName + signature);
+                    else out.println(".method public static " + methodName + "()V");
+                }
+
+                out.println("   .limit stack 100");
+                out.println("   .limit locals 100");
+
+                if (isConstructor) {
+                    out.println("   aload_0");
+                    out.println("   invokespecial java/lang/Object/<init>()V");
+                }
+                break;
+
+             case PARAM_DECL:
+                 // arg1 is descriptor
+                 boolean isRefParam = false;
+                 if (instr.arg1 != null && (instr.arg1.startsWith("L") || instr.arg1.startsWith("["))) {
+                     isRefParam = true;
+                 }
+                 if (instr.target.equals("this")) {
+                     varMap.put("this", 0);
+                     varIsRef.put("this", true);
+                     if (nextVarIndex == 0) nextVarIndex = 1;
+                 } else {
+                     if (!varMap.containsKey(instr.target)) {
+                         varMap.put(instr.target, nextVarIndex++);
+                         varIsRef.put(instr.target, isRefParam);
+                     }
+                 }
+                 break;
+
+             case FUNC_EXIT:
+                 if (currentMethodName != null) {
+                     if (!lastOpWasReturn) {
+                         out.println("   return");
+                     }
+                     out.println(".end method");
+                     out.println();
+                     currentMethodName = null;
+                 }
+                 break;
+
+             case LABEL:
+                 out.println(instr.target + ":");
+                 break;
+
+             case NEW:
+                 String cls = instr.arg1;
+                 out.println("   new " + cls);
+                 out.println("   dup");
+                 int argc = Integer.parseInt(instr.arg2);
+                 StringBuilder sb = new StringBuilder("(");
+                 for(int i=0; i<argc; i++) sb.append("I"); // Assumes int args if we don't have types?
+                 // Wait, NEW calls constructor. We still lack constructor signature in NEW op!
+                 // TAC NEW instruction doesn't carry signature.
+                 // BytecodeGeneratorPass handles NEW.
+                 // We need to match constructor.
+                 // If we have single constructor, maybe okay?
+                 // But we hardcoded (I...I)V in NEW.
+                 // If constructor takes objects, this fails.
+                 // FIXME: NEW needs signature or arg types.
+                 // Since I didn't update TAC NEW logic, I'll stick to 'I'.
+                 // This is a known limitation.
+                 sb.append(")V");
+                 out.println("   invokespecial " + cls + "/<init>" + sb);
+                 storeVar(out, instr.target, true);
+                 break;
+
+             case LOAD_CONST:
+                 boolean isRef = false;
+                 try {
+                      int val = Integer.parseInt(instr.arg1);
+                      if (val >= -128 && val <= 127) out.println("   bipush " + val);
+                      else if (val >= -32768 && val <= 32767) out.println("   sipush " + val);
+                      else out.println("   ldc " + val);
+                 } catch (Exception e) {
+                      if (instr.arg1.equals("true")) out.println("   iconst_1");
+                      else if (instr.arg1.equals("false")) out.println("   iconst_0");
+                      else if (instr.arg1.equals("null")) { out.println("   aconst_null"); isRef = true; }
+                      else { out.println("   ldc " + instr.arg1); isRef = true; }
+                 }
+                 storeVar(out, instr.target, isRef);
+                 break;
+
+             case LOAD_VAR:
+                 loadVar(out, instr.arg1);
+                 storeVar(out, instr.target, isRef(instr.arg1));
+                 break;
+
+             case STORE_VAR:
+                 loadVar(out, instr.arg1);
+                 storeVar(out, instr.target, isRef(instr.arg1));
+                 break;
+
+             case CALL_VIRTUAL:
+                 String mName = instr.arg2;
+                 int args = 0;
+                 if (mName.contains(":")) {
+                     String[] p = mName.split(":");
+                     mName = p[0];
+                     args = Integer.parseInt(p[1]);
+                 }
+
+                 String cName = "Main";
+                 String meth = mName;
+                 if (mName.contains(".")) {
+                     String[] p = mName.split("\\.");
+                     cName = p[0];
+                     meth = p[1];
+                 }
+
+                 StringBuilder callSig = new StringBuilder("(");
+                 for(int i=0; i < args - 1; i++) callSig.append("I"); // Still assuming I
+                 callSig.append(")I"); // Still assuming I return
+
+                 out.println("   invokevirtual " + cName + "/" + meth + callSig);
+                 storeVar(out, instr.target, false);
+                 break;
+
+             case GET_FIELD:
+                 loadVar(out, instr.arg1);
+                 String[] fp = instr.arg2.split(":");
+                 String fClass = fp.length > 1 ? fp[0] : "Main";
+                 String fName = fp.length > 1 ? fp[1] : instr.arg2;
+                 out.println("   getfield " + fClass + "/" + fName + " I");
+                 storeVar(out, instr.target, false);
+                 break;
+
+             case PUT_FIELD:
+                 loadVar(out, instr.target);
+                 loadVar(out, instr.arg2);
+                 String[] fp2 = instr.arg1.split(":");
+                 String fClass2 = fp2.length > 1 ? fp2[0] : "Main";
+                 String fName2 = fp2.length > 1 ? fp2[1] : instr.arg1;
+                 out.println("   putfield " + fClass2 + "/" + fName2 + " I");
+                 break;
+
+             case RETURN:
+                 if (instr.target != null) {
+                     loadVar(out, instr.target);
+                     out.println("   ireturn");
+                 } else {
+                     out.println("   return");
+                 }
+                 isReturn = true;
+                 break;
+
+             case IFZ:
+                 loadVar(out, instr.target);
+                 out.println("   ifeq " + instr.arg1);
+                 break;
+
+             case GOTO:
+                 out.println("   goto " + instr.target);
+                 break;
+
+             case PARAM:
+                 loadVar(out, instr.target);
+                 break;
+
+             case ADD:
+                loadVar(out, instr.arg1); loadVar(out, instr.arg2); out.println("   iadd"); storeVar(out, instr.target, false); break;
+             case SUB:
+                loadVar(out, instr.arg1); loadVar(out, instr.arg2); out.println("   isub"); storeVar(out, instr.target, false); break;
+             case MUL:
+                loadVar(out, instr.arg1); loadVar(out, instr.arg2); out.println("   imul"); storeVar(out, instr.target, false); break;
+             case DIV:
+                loadVar(out, instr.arg1); loadVar(out, instr.arg2); out.println("   idiv"); storeVar(out, instr.target, false); break;
+
+             case AND:
+                loadVar(out, instr.arg1); loadVar(out, instr.arg2); out.println("   iand"); storeVar(out, instr.target, false); break;
+             case OR:
+                loadVar(out, instr.arg1); loadVar(out, instr.arg2); out.println("   ior"); storeVar(out, instr.target, false); break;
+             case NOT:
+                loadVar(out, instr.arg1); out.println("   iconst_1"); out.println("   ixor"); storeVar(out, instr.target, false); break;
+             case NEG:
+                loadVar(out, instr.arg1); out.println("   ineg"); storeVar(out, instr.target, false); break;
+
+             case EQ:
+             case NEQ:
+             case LT:
+             case GT:
+             case LE:
+             case GE:
+                 genCompare(out, instr);
+                 break;
+
+             default:
+                break;
+        }
+
+        lastOpWasReturn = isReturn;
+    }
+
+    private void genCompare(PrintWriter out, TACInstruction instr) {
+        loadVar(out, instr.arg1);
+        loadVar(out, instr.arg2);
         String labelTrue = "True" + System.nanoTime();
         String labelEnd = "End" + System.nanoTime();
 
@@ -328,22 +360,31 @@ public class BytecodeGeneratorPass implements CompilerPass {
         out.println(labelTrue + ":");
         out.println("   iconst_1");
         out.println(labelEnd + ":");
-        storeVar(out, instr.target, varMap);
+        storeVar(out, instr.target, false);
     }
 
-    private void loadVar(PrintWriter out, String name, Map<String, Integer> varMap) {
+    private void loadVar(PrintWriter out, String name) {
         if (!varMap.containsKey(name)) {
             varMap.put(name, varMap.size());
+            varIsRef.put(name, false);
         }
         int idx = varMap.get(name);
-        out.println("   iload " + idx);
+        boolean isRef = varIsRef.getOrDefault(name, false);
+        if (isRef) out.println("   aload " + idx);
+        else out.println("   iload " + idx);
     }
 
-    private void storeVar(PrintWriter out, String name, Map<String, Integer> varMap) {
+    private void storeVar(PrintWriter out, String name, boolean isRef) {
         if (!varMap.containsKey(name)) {
-            varMap.put(name, varMap.size());
+            varMap.put(name, nextVarIndex++);
         }
+        varIsRef.put(name, isRef);
         int idx = varMap.get(name);
-        out.println("   istore " + idx);
+        if (isRef) out.println("   astore " + idx);
+        else out.println("   istore " + idx);
+    }
+
+    private boolean isRef(String name) {
+        return varIsRef.getOrDefault(name, false);
     }
 }

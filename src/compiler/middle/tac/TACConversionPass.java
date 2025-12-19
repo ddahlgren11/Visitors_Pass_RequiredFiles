@@ -26,6 +26,14 @@ public class TACConversionPass implements CompilerPass, ASTVisitor {
     @Override
     public String name() { return "TACConversionPass"; }
 
+    private String getDescriptor(String type) {
+        if (type.equals("int")) return "I";
+        if (type.equals("boolean")) return "Z";
+        if (type.equals("void")) return "V";
+        if (type.equals("String")) return "Ljava/lang/String;";
+        return "L" + type + ";";
+    }
+
     @Override
     public void execute(CompilerContext context) {
         ASTNode root = context.getAst();
@@ -123,7 +131,11 @@ public class TACConversionPass implements CompilerPass, ASTVisitor {
             MemberAccessNode man = (MemberAccessNode) node.target;
             man.object.accept(this);
             String obj = lastResult;
-            emit(OpCode.PUT_FIELD, obj, man.memberName, value);
+            String fieldName = man.memberName;
+            if (man.object.type != null) {
+                fieldName = man.object.type + ":" + fieldName;
+            }
+            emit(OpCode.PUT_FIELD, obj, fieldName, value);
             lastResult = value; // Assignment result is the value?
         } else {
              throw new RuntimeException("Unsupported assignment target");
@@ -132,11 +144,17 @@ public class TACConversionPass implements CompilerPass, ASTVisitor {
 
     @Override
     public void visitFunctionDeclNode(FunctionDeclNode node) {
-        emit(OpCode.FUNC_ENTRY, node.name, String.valueOf(node.getParams().size()), null);
+        StringBuilder sig = new StringBuilder("(");
+        for (VarDeclNode param : node.getParams()) {
+            sig.append(getDescriptor(param.type));
+        }
+        sig.append(")").append(getDescriptor(node.returnType));
+
+        emit(OpCode.FUNC_ENTRY, node.name, String.valueOf(node.getParams().size()), sig.toString());
 
         // Emit params declarations
         for (VarDeclNode param : node.getParams()) {
-             emit(OpCode.PARAM_DECL, param.name, null, null);
+             emit(OpCode.PARAM_DECL, param.name, getDescriptor(param.type), null);
         }
 
         emit(OpCode.LABEL, node.name, null, null);
@@ -290,21 +308,37 @@ public class TACConversionPass implements CompilerPass, ASTVisitor {
         String prevClass = currentClass;
         currentClass = node.className;
 
+        for (VarDeclNode field : node.fields) {
+            emit(OpCode.FIELD_DECL, null, node.className, field.name);
+        }
+
         for (FunctionDeclNode method : node.methods) {
-            String mangledName = node.className + "_" + method.name;
+            String mangledName = node.className + "." + method.name;
             // Add params to size, include implicit 'this' (1 + params)
             int paramCount = 1 + method.getParams().size();
 
-            emit(OpCode.FUNC_ENTRY, mangledName, String.valueOf(paramCount), null);
+            StringBuilder sig = new StringBuilder("(");
+            for (VarDeclNode param : method.getParams()) {
+                sig.append(getDescriptor(param.type));
+            }
+            sig.append(")").append(getDescriptor(method.returnType));
+
+            // If constructor, return type is V in bytecode
+            if (method.returnType.equals(node.className)) {
+                 int closeParen = sig.lastIndexOf(")");
+                 sig.replace(closeParen + 1, sig.length(), "V");
+            }
+
+            emit(OpCode.FUNC_ENTRY, mangledName, String.valueOf(paramCount), sig.toString());
 
             // Param declarations
             // For instance methods, do we emit 'this'?
             // IdentifierNode visitor uses "this".
             // If we emit PARAM_DECL "this", we map it to 0.
-            emit(OpCode.PARAM_DECL, "this", null, null);
+            emit(OpCode.PARAM_DECL, "this", "L" + node.className + ";", null);
 
             for (VarDeclNode param : method.getParams()) {
-                 emit(OpCode.PARAM_DECL, param.name, null, null);
+                 emit(OpCode.PARAM_DECL, param.name, getDescriptor(param.type), null);
             }
 
             emit(OpCode.LABEL, mangledName, null, null);
@@ -357,7 +391,7 @@ public class TACConversionPass implements CompilerPass, ASTVisitor {
         // Mangle method name if class is known
         String methodName = node.methodName;
         if (className != null && !className.equals("int") && !className.equals("boolean") && !className.equals("string")) {
-             methodName = className + "_" + methodName;
+             methodName = className + "." + methodName;
         }
 
         // Emit PARAM for object (receiver)
@@ -385,7 +419,11 @@ public class TACConversionPass implements CompilerPass, ASTVisitor {
         node.object.accept(this);
         String obj = lastResult;
         String temp = newTemp();
-        emit(OpCode.GET_FIELD, temp, obj, node.memberName);
+        String fieldName = node.memberName;
+        if (node.object.type != null) {
+            fieldName = node.object.type + ":" + fieldName;
+        }
+        emit(OpCode.GET_FIELD, temp, obj, fieldName);
         lastResult = temp;
     }
 }
