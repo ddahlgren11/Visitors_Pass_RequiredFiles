@@ -34,7 +34,7 @@ public class MainTest {
         Cat c;
 
         void speak(int x, int y) {
-            print(d.name)
+            print(d.name);
             print("Meow: " + c.volume);
             d.bark();
         }
