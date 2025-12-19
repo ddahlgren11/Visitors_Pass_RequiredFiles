@@ -19,10 +19,10 @@ public class GenTest {
 
     @AfterEach
     public void cleanup() {
-        File m = new File("Main.j");
-        if (m.exists()) m.delete();
-        File p = new File("Point.j");
-        if (p.exists()) p.delete();
+        // File m = new File("Main.j");
+        // if (m.exists()) m.delete();
+        // File p = new File("Point.j");
+        // if (p.exists()) p.delete();
     }
 
     @Test
@@ -77,8 +77,8 @@ public class GenTest {
         String mainContent = readFile(f);
         assertTrue(mainContent.contains("new Point"));
         assertTrue(mainContent.contains("invokespecial Point/<init>()V"));
-        // Call site mismatch is expected for now ((II)I vs (II)V)
-        assertTrue(mainContent.contains("invokevirtual Point/set(II)I"));
+        // We now expect correct signature (V return)
+        assertTrue(mainContent.contains("invokevirtual Point/set(II)V"));
     }
 
     private void printFile(File f) throws Exception {

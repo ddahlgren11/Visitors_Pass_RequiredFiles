@@ -442,6 +442,7 @@ public class TypeCheckingVisitor implements ASTVisitor {
         }
 
         setType(node, method.returnType);
+        node.descriptor = getMethodDescriptor(method);
     }
 
     private FunctionDeclNode findMethod(ClassDeclNode classDecl, String methodName) {
@@ -477,14 +478,41 @@ public class TypeCheckingVisitor implements ASTVisitor {
                     }
                 }
             }
+            // Generate descriptor for constructor (always returns void 'V' in signature)
+            StringBuilder sb = new StringBuilder("(");
+            for (VarDeclNode param : constructor.params) {
+                sb.append(getDescriptor(param.type));
+            }
+            sb.append(")V");
+            node.descriptor = sb.toString();
         } else {
             // Default constructor?
             if (node.args.size() > 0) {
                  diag.addError("No matching constructor for " + node.className);
             }
+            node.descriptor = "()V";
         }
 
         setType(node, node.className);
+    }
+
+    private String getDescriptor(String type) {
+        if (type == null) return "V";
+        if (type.equals("int")) return "I";
+        if (type.equals("boolean")) return "Z";
+        if (type.equals("void")) return "V";
+        if (type.equals("String")) return "Ljava/lang/String;";
+        return "L" + type + ";";
+    }
+
+    private String getMethodDescriptor(FunctionDeclNode method) {
+        StringBuilder sb = new StringBuilder("(");
+        for (VarDeclNode param : method.params) {
+            sb.append(getDescriptor(param.type));
+        }
+        sb.append(")");
+        sb.append(getDescriptor(method.returnType));
+        return sb.toString();
     }
 
     @Override

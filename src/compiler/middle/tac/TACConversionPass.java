@@ -324,7 +324,7 @@ public class TACConversionPass implements CompilerPass, ASTVisitor {
             sig.append(")").append(getDescriptor(method.returnType));
 
             // If constructor, return type is V in bytecode
-            if (method.returnType.equals(node.className)) {
+            if (method.name.equals(node.className)) {
                  int closeParen = sig.lastIndexOf(")");
                  sig.replace(closeParen + 1, sig.length(), "V");
             }
@@ -345,7 +345,7 @@ public class TACConversionPass implements CompilerPass, ASTVisitor {
 
             method.body.accept(this);
 
-            if (method.returnType.equals("void")) {
+            if (method.returnType.equals("void") || method.name.equals(node.className)) {
                  emit(OpCode.RETURN, null, null, null);
             }
             emit(OpCode.FUNC_EXIT, mangledName, null, null);
@@ -369,7 +369,8 @@ public class TACConversionPass implements CompilerPass, ASTVisitor {
         }
 
         String temp = newTemp();
-        emit(OpCode.NEW, temp, node.className, String.valueOf(node.args.size()));
+        String signature = node.descriptor != null ? node.descriptor : "()V";
+        emit(OpCode.NEW, temp, node.className, node.args.size() + ":" + signature);
         lastResult = temp;
     }
 
@@ -408,9 +409,10 @@ public class TACConversionPass implements CompilerPass, ASTVisitor {
         }
 
         String temp = newTemp();
-        // Encode param count
+        // Encode param count and signature
         int totalArgs = 1 + node.args.size();
-        emit(OpCode.CALL_VIRTUAL, temp, obj, methodName + ":" + totalArgs);
+        String signature = node.descriptor != null ? node.descriptor : "()V";
+        emit(OpCode.CALL_VIRTUAL, temp, obj, methodName + ":" + totalArgs + ":" + signature);
         lastResult = temp;
     }
 
