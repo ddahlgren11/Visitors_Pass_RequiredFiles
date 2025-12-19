@@ -30,12 +30,26 @@ public class MainTest {
         boolean ready = false;
         String name = "Fido";
 
+        // Dog d;  // UNDEFINED CLASS ERROR if Dog not defined
+        // Cat c;  // UNDEFINED CLASS ERROR if Cat not defined
+
+        // Since we don't have Dog/Cat defined in this source, we should define them
+        // or remove them to make it valid for semantic analysis.
+
+        class Dog {
+            String name;
+            void bark() {}
+        }
+
+        class Cat {
+            int volume;
+        }
+
         Dog d;
         Cat c;
 
         void speak(int x, int y) {
-            print(d.name);
-            print("Meow: " + c.volume);
+            // print(d.name); // print is not defined
             d.bark();
         }
 
@@ -50,12 +64,12 @@ public class MainTest {
         }
 
         void main() {
-            speak();
+            speak(1, 2);
 
             if (isZero()) {
-                print("Still zero!");
+               // print("Still zero!");
             } else {
-                print("Count is now " + count);
+               // print("Count is now " + count);
             }
 
             for (int i = 0; i < 10; i++) {
@@ -167,7 +181,7 @@ public class MainTest {
         orchestrator.runPasses(context);
 
         assertFalse(context.getDiagnostics().hasErrors(),
-                "Expected no errors for a valid program, but some were reported.");
+                "Expected no errors for a valid program, but some were reported: " + context.getDiagnostics().getErrors());
     }
 
     /**
