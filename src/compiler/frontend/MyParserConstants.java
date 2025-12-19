@@ -45,53 +45,57 @@ public interface MyParserConstants {
   /** RegularExpression Id. */
   int STRING_LITERAL = 23;
   /** RegularExpression Id. */
-  int EQ = 24;
+  int BAD_STRING = 24;
   /** RegularExpression Id. */
-  int ASSIGN = 25;
+  int EQ = 25;
   /** RegularExpression Id. */
-  int INCR = 26;
+  int ASSIGN = 26;
   /** RegularExpression Id. */
-  int DECR = 27;
+  int INCR = 27;
   /** RegularExpression Id. */
-  int PLUS = 28;
+  int DECR = 28;
   /** RegularExpression Id. */
-  int MINUS = 29;
+  int PLUS = 29;
   /** RegularExpression Id. */
-  int MULT = 30;
+  int MINUS = 30;
   /** RegularExpression Id. */
-  int DIV = 31;
+  int MULT = 31;
   /** RegularExpression Id. */
-  int LT = 32;
+  int DIV = 32;
   /** RegularExpression Id. */
-  int GT = 33;
+  int LT = 33;
   /** RegularExpression Id. */
-  int NEQ = 34;
+  int GT = 34;
   /** RegularExpression Id. */
-  int AND = 35;
+  int NEQ = 35;
   /** RegularExpression Id. */
-  int OR = 36;
+  int AND = 36;
   /** RegularExpression Id. */
-  int NOT = 37;
+  int OR = 37;
   /** RegularExpression Id. */
-  int DOT = 38;
+  int NOT = 38;
   /** RegularExpression Id. */
-  int LPAREN = 39;
+  int DOT = 39;
   /** RegularExpression Id. */
-  int RPAREN = 40;
+  int LPAREN = 40;
   /** RegularExpression Id. */
-  int LBRACE = 41;
+  int RPAREN = 41;
   /** RegularExpression Id. */
-  int RBRACE = 42;
+  int LBRACE = 42;
   /** RegularExpression Id. */
-  int SEMI = 43;
+  int RBRACE = 43;
   /** RegularExpression Id. */
-  int COMMA = 44;
+  int SEMI = 44;
   /** RegularExpression Id. */
-  int IDENTIFIER = 45;
+  int COMMA = 45;
   /** RegularExpression Id. */
-  int LETTER = 46;
+  int IDENTIFIER = 46;
   /** RegularExpression Id. */
-  int DIGIT = 47;
+  int LETTER = 47;
+  /** RegularExpression Id. */
+  int DIGIT = 48;
+  /** RegularExpression Id. */
+  int UNEXPECTED_CHAR = 49;
 
   /** Lexical state. */
   int DEFAULT = 0;
@@ -122,6 +126,7 @@ public interface MyParserConstants {
     "\"this\"",
     "<INT_LITERAL>",
     "<STRING_LITERAL>",
+    "<BAD_STRING>",
     "\"==\"",
     "\"=\"",
     "\"++\"",
@@ -146,6 +151,7 @@ public interface MyParserConstants {
     "<IDENTIFIER>",
     "<LETTER>",
     "<DIGIT>",
+    "<UNEXPECTED_CHAR>",
   };
 
 }
