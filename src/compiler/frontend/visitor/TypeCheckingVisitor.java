@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class TypeCheckingVisitor implements ASTVisitor {
+public class TypeCheckingVisitor implements ASTVisitor<Void> {
     private final SymbolTable table;
     private final Diagnostics diag;
 
@@ -50,12 +50,10 @@ public class TypeCheckingVisitor implements ASTVisitor {
     // --- Visitor Methods ---
 
     @Override
-    public void visitBlockNode(BlockNode node) {
+    public Void visitBlockNode(BlockNode node) {
         table.enterScope();
 
         // Pre-pass: Register all classes and functions in the current scope
-        // This enables forward references for top-level constructs
-
         for (ASTNode stmt : node.getStatements()) {
             if (stmt instanceof ClassDeclNode) {
                 ClassDeclNode cdn = (ClassDeclNode) stmt;
@@ -73,10 +71,11 @@ public class TypeCheckingVisitor implements ASTVisitor {
         }
 
         table.exitScope();
+        return null;
     }
 
     @Override
-    public void visitClassDeclNode(ClassDeclNode node) {
+    public Void visitClassDeclNode(ClassDeclNode node) {
         String prevClass = currentClassName;
         currentClassName = node.className;
 
@@ -110,26 +109,20 @@ public class TypeCheckingVisitor implements ASTVisitor {
 
         table.exitScope();
         currentClassName = prevClass;
+        return null;
     }
 
     @Override
-    public void visitFunctionDeclNode(FunctionDeclNode node) {
+    public Void visitFunctionDeclNode(FunctionDeclNode node) {
         String prevRet = currentMethodReturnType;
         currentMethodReturnType = node.returnType;
 
-        // Ensure function is declared in current scope (if not handled by pre-pass)
         Optional<Symbol> existing = table.lookupLocal(node.name);
         if (existing.isPresent() && existing.get().declaration() == node) {
-            // Already declared, good.
+            // Already declared
         } else {
              Symbol funcSym = new Symbol(node.name, Kind.FUNCTION, node);
-             if (!table.declare(funcSym)) {
-                 // Duplicate definition error only if it's not the same node
-                 // But duplicate check is mostly handled by declare returning false.
-                 // We should probably log error if we are here and declare failed?
-                 // But usually pre-pass handles it or ClassDecl handles it.
-                 // If we are here, it means it wasn't pre-declared?
-             }
+             table.declare(funcSym);
         }
 
         table.enterScope();
@@ -154,6 +147,7 @@ public class TypeCheckingVisitor implements ASTVisitor {
 
         table.exitScope();
         currentMethodReturnType = prevRet;
+        return null;
     }
 
     // Helper to check if a block returns
@@ -172,17 +166,15 @@ public class TypeCheckingVisitor implements ASTVisitor {
             boolean elseReturns = ifn.getElseBlock() != null && checkReturn(ifn.getElseBlock());
             return thenReturns && elseReturns;
         }
-        // While/For loops generally don't guarantee return unless we do constant folding, assuming false.
         return false;
     }
 
     @Override
-    public void visitVarDeclNode(VarDeclNode node) {
+    public Void visitVarDeclNode(VarDeclNode node) {
         Optional<Symbol> existing = table.lookupLocal(node.name);
         if (existing.isPresent() && existing.get().declaration() == node) {
-            // Already declared (e.g. by ClassDecl pre-pass), just check initializer
+            // Already declared
         } else {
-            // Not declared, so declare it (Local variable)
             Symbol sym = new Symbol(node.name, Kind.VARIABLE, node);
             if (!table.declare(sym)) {
                 diag.addError("Duplicate variable: " + node.name);
@@ -196,10 +188,11 @@ public class TypeCheckingVisitor implements ASTVisitor {
                 diag.addError("Type mismatch in initialization of " + node.name + ": expected " + node.type + ", got " + initType);
             }
         }
+        return null;
     }
 
     @Override
-    public void visitAssignmentNode(AssignmentNode node) {
+    public Void visitAssignmentNode(AssignmentNode node) {
         node.getTarget().accept(this);
         node.getExpression().accept(this);
 
@@ -211,22 +204,39 @@ public class TypeCheckingVisitor implements ASTVisitor {
                 diag.addError("Type mismatch in assignment: expected " + targetType + ", got " + exprType);
             }
         }
+        return null;
     }
 
     @Override
-    public void visitBinaryExprNode(BinaryExprNode node) {
-        // This node type appears to be unused by the grammar (which uses BinaryOpNode).
-        // However, we implement it for completeness or if AST structure changes.
-        // Logic mirrors visitBinaryOpNode.
+    public Void visitBinaryExprNode(BinaryExprNode node) {
         node.getLeft().accept(this);
         node.getRight().accept(this);
 
         String leftType = getType(node.getLeft());
         String rightType = getType(node.getRight());
 
-        if (leftType == null || rightType == null) return;
+        if (leftType == null || rightType == null) return null;
 
         String op = node.getOp();
+        checkBinaryOp(node, op, leftType, rightType);
+        return null;
+    }
+
+    @Override
+    public Void visitBinaryOpNode(BinaryOpNode node) {
+        node.left.accept(this);
+        node.right.accept(this);
+
+        String leftType = getType(node.left);
+        String rightType = getType(node.right);
+
+        if (leftType == null || rightType == null) return null;
+
+        checkBinaryOp(node, node.op, leftType, rightType);
+        return null;
+    }
+
+    private void checkBinaryOp(ExpressionNode node, String op, String leftType, String rightType) {
         if (op.equals("+") || op.equals("-") || op.equals("*") || op.equals("/")) {
              if (isNumeric(leftType) && isNumeric(rightType)) {
                     setType(node, "int");
@@ -263,54 +273,10 @@ public class TypeCheckingVisitor implements ASTVisitor {
     }
 
     @Override
-    public void visitBinaryOpNode(BinaryOpNode node) {
-        node.left.accept(this);
-        node.right.accept(this);
-
-        String leftType = getType(node.left);
-        String rightType = getType(node.right);
-
-        if (leftType == null || rightType == null) return;
-
-        String op = node.op;
-        if (op.equals("+") || op.equals("-") || op.equals("*") || op.equals("/")) {
-             if (isNumeric(leftType) && isNumeric(rightType)) {
-                    setType(node, "int");
-                } else if (op.equals("+") && (leftType.equals("String") || rightType.equals("String"))) {
-                    setType(node, "String");
-                } else {
-                    diag.addError("Operator " + op + " requires numeric operands.");
-                    setType(node, "int");
-                }
-        } else if (op.equals("<") || op.equals(">") || op.equals("true") || op.equals("false")) {
-             if (isNumeric(leftType) && isNumeric(rightType)) {
-                    setType(node, "boolean");
-                } else {
-                    diag.addError("Operator " + op + " requires numeric operands.");
-                    setType(node, "boolean");
-                }
-        } else if (op.equals("&&") || op.equals("||")) {
-             if (isBoolean(leftType) && isBoolean(rightType)) {
-                    setType(node, "boolean");
-                } else {
-                    diag.addError("Operator " + op + " requires boolean operands.");
-                    setType(node, "boolean");
-                }
-        } else if (op.equals("==") || op.equals("!=")) {
-             if (isCompatible(leftType, rightType) || isCompatible(rightType, leftType)) {
-                    setType(node, "boolean");
-                } else {
-                    diag.addError("Operator " + op + " requires compatible operands.");
-                    setType(node, "boolean");
-                }
-        }
-    }
-
-    @Override
-    public void visitUnaryOpNode(UnaryOpNode node) {
+    public Void visitUnaryOpNode(UnaryOpNode node) {
         node.expr.accept(this);
         String type = getType(node.expr);
-        if (type == null) return;
+        if (type == null) return null;
 
         if (node.op.equals("!")) {
             if (isBoolean(type)) setType(node, "boolean");
@@ -319,10 +285,11 @@ public class TypeCheckingVisitor implements ASTVisitor {
             if (isNumeric(type)) setType(node, "int");
             else diag.addError("Operator " + node.op + " requires numeric operand.");
         }
+        return null;
     }
 
     @Override
-    public void visitIdentifierNode(IdentifierNode node) {
+    public Void visitIdentifierNode(IdentifierNode node) {
         if ("this".equals(node.name)) {
             if (currentClassName != null) {
                 setType(node, currentClassName);
@@ -330,7 +297,7 @@ public class TypeCheckingVisitor implements ASTVisitor {
                 diag.addError("'this' used outside of class context.");
                 setType(node, "unknown");
             }
-            return;
+            return null;
         }
 
         Optional<Symbol> sym = table.lookup(node.name);
@@ -339,7 +306,7 @@ public class TypeCheckingVisitor implements ASTVisitor {
             if (s.declaration() instanceof VarDeclNode) {
                 setType(node, ((VarDeclNode) s.declaration()).type);
             } else if (s.declaration() instanceof FunctionDeclNode) {
-                 setType(node, "unknown"); // Identifiers referring to functions directly not supported unless call
+                 setType(node, "unknown");
             } else {
                 setType(node, "unknown");
             }
@@ -347,10 +314,11 @@ public class TypeCheckingVisitor implements ASTVisitor {
             diag.addError("Undefined identifier: " + node.name);
             setType(node, "unknown");
         }
+        return null;
     }
 
     @Override
-    public void visitLiteralNode(LiteralNode node) {
+    public Void visitLiteralNode(LiteralNode node) {
         if (node.value.matches("-?\\d+")) {
             setType(node, "int");
         } else if (node.value.equals("true") || node.value.equals("false")) {
@@ -358,12 +326,13 @@ public class TypeCheckingVisitor implements ASTVisitor {
         } else if (node.value.equals("null")) {
             setType(node, "null");
         } else {
-            setType(node, "String"); // String literal treated as String type
+            setType(node, "String");
         }
+        return null;
     }
 
     @Override
-    public void visitMethodCallNode(MethodCallNode node) {
+    public Void visitMethodCallNode(MethodCallNode node) {
         String className = null;
 
         // 1. Resolve Object
@@ -371,22 +340,20 @@ public class TypeCheckingVisitor implements ASTVisitor {
             node.object.accept(this);
             String objType = getType(node.object);
             if (objType == null || isPrimitive(objType)) {
-                // Check if it's a static call? (e.g. System.out) - not supported
                 diag.addError("Cannot call method on primitive or null type: " + objType);
-                return;
+                return null;
             }
             className = objType;
         } else {
             // Implicit 'this' or local function
             if (currentClassName != null) {
-                // Try to find method in current class
                 Optional<Symbol> classSym = table.lookup(currentClassName);
                 if (classSym.isPresent()) {
                     ClassDeclNode classDecl = (ClassDeclNode) classSym.get().declaration();
                     FunctionDeclNode method = findMethod(classDecl, node.methodName);
                     if (method != null) {
                          checkMethodCall(node, method);
-                         return;
+                         return null;
                     }
                 }
             }
@@ -395,11 +362,11 @@ public class TypeCheckingVisitor implements ASTVisitor {
             Optional<Symbol> sym = table.lookup(node.methodName);
             if (sym.isPresent() && sym.get().kind() == Kind.FUNCTION) {
                 checkMethodCall(node, (FunctionDeclNode) sym.get().declaration());
-                return;
+                return null;
             }
 
             diag.addError("Method not found: " + node.methodName);
-            return;
+            return null;
         }
 
         // 2. Lookup Class
@@ -407,7 +374,7 @@ public class TypeCheckingVisitor implements ASTVisitor {
             Optional<Symbol> classSym = table.lookup(className);
             if (!classSym.isPresent() || classSym.get().kind() != Kind.TYPE) {
                 diag.addError("Undefined class: " + className);
-                return;
+                return null;
             }
             ClassDeclNode classDecl = (ClassDeclNode) classSym.get().declaration();
 
@@ -415,21 +382,20 @@ public class TypeCheckingVisitor implements ASTVisitor {
             FunctionDeclNode method = findMethod(classDecl, node.methodName);
             if (method == null) {
                 diag.addError("Method " + node.methodName + " not found in class " + className);
-                return;
+                return null;
             }
 
             checkMethodCall(node, method);
         }
+        return null;
     }
 
     private void checkMethodCall(MethodCallNode node, FunctionDeclNode method) {
-        // Check Arg Count
         if (node.args.size() != method.params.size()) {
             diag.addError("Method " + method.name + " expects " + method.params.size() + " arguments, got " + node.args.size());
             return;
         }
 
-        // Check Arg Types
         for (int i = 0; i < node.args.size(); i++) {
             ExpressionNode arg = node.args.get(i);
             arg.accept(this);
@@ -452,12 +418,12 @@ public class TypeCheckingVisitor implements ASTVisitor {
     }
 
     @Override
-    public void visitNewExprNode(NewExprNode node) {
+    public Void visitNewExprNode(NewExprNode node) {
         Optional<Symbol> sym = table.lookup(node.className);
         if (!sym.isPresent() || sym.get().kind() != Kind.TYPE) {
             diag.addError("Undefined class: " + node.className);
             setType(node, "unknown");
-            return;
+            return null;
         }
 
         ClassDeclNode classDecl = (ClassDeclNode) sym.get().declaration();
@@ -478,46 +444,46 @@ public class TypeCheckingVisitor implements ASTVisitor {
                 }
             }
         } else {
-            // Default constructor?
             if (node.args.size() > 0) {
                  diag.addError("No matching constructor for " + node.className);
             }
         }
 
         setType(node, node.className);
+        return null;
     }
 
     @Override
-    public void visitMemberAccessNode(MemberAccessNode node) {
+    public Void visitMemberAccessNode(MemberAccessNode node) {
         node.object.accept(this);
         String objType = getType(node.object);
 
         if (objType == null || isPrimitive(objType)) {
             diag.addError("Cannot access member of non-object type: " + objType);
-            return;
+            return null;
         }
 
         Optional<Symbol> classSym = table.lookup(objType);
         if (!classSym.isPresent()) {
              diag.addError("Class not found: " + objType);
-             return;
+             return null;
         }
 
         ClassDeclNode classDecl = (ClassDeclNode) classSym.get().declaration();
-        // Find field
         for (VarDeclNode field : classDecl.fields) {
             if (field.name.equals(node.memberName)) {
                 setType(node, field.type);
-                return;
+                return null;
             }
         }
 
         diag.addError("Field " + node.memberName + " not found in class " + objType);
         setType(node, "unknown");
+        return null;
     }
 
     @Override
-    public void visitReturnNode(ReturnNode node) {
+    public Void visitReturnNode(ReturnNode node) {
         if (currentMethodReturnType != null) {
             if (node.getExpr() != null) {
                 node.getExpr().accept(this);
@@ -531,28 +497,29 @@ public class TypeCheckingVisitor implements ASTVisitor {
                 }
             }
         }
+        return null;
     }
 
-    // State for context
     private String currentClassName = null;
     private String currentMethodReturnType = null;
 
-    // Other nodes need implementation?
-    @Override public void visitIfNode(IfNode node) {
+    @Override public Void visitIfNode(IfNode node) {
         node.getCond().accept(this);
         if (!isBoolean(getType(node.getCond()))) diag.addError("If condition must be boolean");
         node.getThenBlock().accept(this);
         if (node.getElseBlock() != null) node.getElseBlock().accept(this);
+        return null;
     }
 
-    @Override public void visitWhileNode(WhileNode node) {
+    @Override public Void visitWhileNode(WhileNode node) {
         node.getCond().accept(this);
         if (!isBoolean(getType(node.getCond()))) diag.addError("While condition must be boolean");
         node.getBody().accept(this);
+        return null;
     }
 
-    @Override public void visitForNode(ForNode node) {
-        table.enterScope(); // For loop has scope
+    @Override public Void visitForNode(ForNode node) {
+        table.enterScope();
         if (node.getInit() != null) node.getInit().accept(this);
         if (node.getCond() != null) {
             node.getCond().accept(this);
@@ -561,8 +528,9 @@ public class TypeCheckingVisitor implements ASTVisitor {
         if (node.getUpdate() != null) node.getUpdate().accept(this);
         node.getBody().accept(this);
         table.exitScope();
+        return null;
     }
 
-    @Override public void visitEmptyNode(EmptyNode node) {}
+    @Override public Void visitEmptyNode(EmptyNode node) { return null; }
 
 }

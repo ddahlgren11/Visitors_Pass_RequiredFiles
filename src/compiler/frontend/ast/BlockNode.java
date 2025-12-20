@@ -11,7 +11,7 @@ public class BlockNode extends StatementNode {
 
     public List<ASTNode> getStatements() { return statements; }
 
-    @Override public void accept(ASTVisitor visitor) { visitor.visitBlockNode(this); }
+    @Override public <T> T accept(ASTVisitor<T> visitor) { return visitor.visitBlockNode(this); }
 
     @Override
     public ASTTestTree toASTTestTree() {

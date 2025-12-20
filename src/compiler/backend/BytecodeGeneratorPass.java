@@ -2,12 +2,15 @@ package compiler.backend;
 
 import compiler.infra.CompilerContext;
 import compiler.infra.CompilerPass;
-import compiler.infra.Diagnostics;
 import compiler.middle.tac.TACInstruction;
 import compiler.middle.tac.OpCode;
 
-import java.io.PrintWriter;
-import java.io.FileWriter;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Label;
+
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.*;
 
@@ -15,389 +18,316 @@ public class BytecodeGeneratorPass implements CompilerPass {
     @Override
     public String name() { return "BytecodeGeneratorPass"; }
 
-    private Set<String> initializedClasses = new HashSet<>();
     private Map<String, Integer> varMap = new HashMap<>();
     private Map<String, Boolean> varIsRef = new HashMap<>();
     private int nextVarIndex = 0;
-    private String currentMethodName = null;
-    private boolean lastOpWasReturn = false;
+    private Map<String, Label> labelMap = new HashMap<>();
 
     @Override
     public void execute(CompilerContext context) throws Exception {
-        Diagnostics diag = context.getDiagnostics();
         List<TACInstruction> instructions = context.getTacInstructions();
+        if (instructions == null) return;
 
-        if (instructions == null) {
-            diag.log("No TAC instructions found. Skipping bytecode generation.");
-            return;
-        }
-
-        diag.log("Generating Bytecode from " + instructions.size() + " TAC instructions...");
-
-        PrintWriter out = null;
-        String currentFile = null;
+        Map<String, List<TACInstruction>> classInstructions = new LinkedHashMap<>();
+        String currentClass = "Main";
 
         for (TACInstruction instr : instructions) {
-            if (instr.op == OpCode.FIELD_DECL || instr.op == OpCode.FUNC_ENTRY) {
-                String className = "Main";
-                if (instr.op == OpCode.FIELD_DECL) {
-                    className = instr.arg1;
+            if (instr.op == OpCode.FIELD_DECL) {
+                currentClass = instr.arg1;
+            } else if (instr.op == OpCode.FUNC_ENTRY) {
+                String target = instr.target;
+                if (target.contains(".")) {
+                    currentClass = target.substring(0, target.lastIndexOf('.'));
+                } else if (!target.equals("main")) {
+                    currentClass = "Main";
                 } else {
-                    if (instr.target.equals("main")) {
-                        className = "Main";
-                    } else if (instr.target.contains(".")) {
-                        className = instr.target.substring(0, instr.target.indexOf('.'));
-                    }
-                }
-
-                String filename = className + ".j";
-                if (!filename.equals(currentFile)) {
-                    if (out != null) {
-                        out.flush();
-                        out.close();
-                    }
-                    boolean append = initializedClasses.contains(className);
-                    out = new PrintWriter(new FileWriter(filename, append));
-                    currentFile = filename;
-
-                    if (!append) {
-                        out.println(".class public " + className);
-                        out.println(".super java/lang/Object");
-                        out.println();
-
-                        if (className.equals("Main")) {
-                             out.println(".method public <init>()V");
-                             out.println("   aload_0");
-                             out.println("   invokespecial java/lang/Object/<init>()V");
-                             out.println("   return");
-                             out.println(".end method");
-                             out.println();
-                        }
-                        initializedClasses.add(className);
-                    }
+                    currentClass = "Main";
                 }
             }
-
-            if (out == null) {
-                if (!initializedClasses.contains("Main")) {
-                    out = new PrintWriter(new FileWriter("Main.j"));
-                    out.println(".class public Main");
-                    out.println(".super java/lang/Object");
-                    out.println(".method public <init>()V");
-                    out.println("   aload_0");
-                    out.println("   invokespecial java/lang/Object/<init>()V");
-                    out.println("   return");
-                    out.println(".end method");
-                    out.println();
-                    initializedClasses.add("Main");
-                    currentFile = "Main.j";
-                } else if (!"Main.j".equals(currentFile)) {
-                     if (out != null) out.close();
-                     out = new PrintWriter(new FileWriter("Main.j", true));
-                     currentFile = "Main.j";
-                }
-            }
-
-            processInstruction(instr, out);
+            classInstructions.computeIfAbsent(currentClass, k -> new ArrayList<>()).add(instr);
         }
 
-        if (out != null) {
-            out.flush();
-            out.close();
+        for (String className : classInstructions.keySet()) {
+            generateClass(className, classInstructions.get(className));
         }
     }
 
-    private void processInstruction(TACInstruction instr, PrintWriter out) {
-        // Reset return flag unless we set it explicitly
-        boolean isReturn = false;
+    private void generateClass(String className, List<TACInstruction> instrs) throws IOException {
+        ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
+        cw.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC, className, null, "java/lang/Object", null);
 
-        switch(instr.op) {
-            case FIELD_DECL:
-                out.println(".field public " + instr.arg2 + " I");
+        boolean hasInit = false;
+        for (TACInstruction instr : instrs) {
+            if (instr.op == OpCode.FUNC_ENTRY && instr.target.endsWith(".<init>")) {
+                hasInit = true;
                 break;
+            }
+        }
 
-            case FUNC_ENTRY:
-                currentMethodName = instr.target;
-                varMap.clear();
-                varIsRef.clear();
-                nextVarIndex = 0;
+        if (!hasInit && !className.equals("Main")) {
+             MethodVisitor mv = cw.visitMethod(Opcodes.ACC_PUBLIC, "<init>", "()V", null, null);
+             mv.visitCode();
+             mv.visitVarInsn(Opcodes.ALOAD, 0);
+             mv.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false);
+             mv.visitInsn(Opcodes.RETURN);
+             mv.visitMaxs(0, 0);
+             mv.visitEnd();
+        } else if (className.equals("Main") && !hasInit) {
+             MethodVisitor mv = cw.visitMethod(Opcodes.ACC_PUBLIC, "<init>", "()V", null, null);
+             mv.visitCode();
+             mv.visitVarInsn(Opcodes.ALOAD, 0);
+             mv.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false);
+             mv.visitInsn(Opcodes.RETURN);
+             mv.visitMaxs(0, 0);
+             mv.visitEnd();
+        }
 
-                String methodName = instr.target;
-                String signature = instr.arg2;
-                boolean isConstructor = false;
+        for (TACInstruction instr : instrs) {
+            if (instr.op == OpCode.FIELD_DECL) {
+                cw.visitField(Opcodes.ACC_PUBLIC, instr.arg2, "I", null, null).visitEnd();
+            }
+        }
 
-                if (methodName.equals("main")) {
-                    out.println(".method public static main([Ljava/lang/String;)V");
-                    varMap.put("args", nextVarIndex++);
-                    varIsRef.put("args", true);
-                } else if (methodName.contains(".")) {
-                    String[] parts = methodName.split("\\.");
-                    String className = parts[0];
-                    String realName = parts[1];
+        List<TACInstruction> methodInstrs = new ArrayList<>();
+        boolean insideMethod = false;
 
-                    if (realName.equals(className)) {
-                        if (signature != null) out.println(".method public <init>" + signature);
-                        else out.println(".method public <init>()V"); // Fallback
-                        isConstructor = true;
+        for (TACInstruction instr : instrs) {
+            if (instr.op == OpCode.FUNC_ENTRY) {
+                if (insideMethod) {
+                    methodInstrs.clear();
+                }
+                methodInstrs.add(instr);
+                insideMethod = true;
+            } else if (instr.op == OpCode.FUNC_EXIT) {
+                methodInstrs.add(instr);
+                generateMethod(cw, className, methodInstrs);
+                methodInstrs.clear();
+                insideMethod = false;
+            } else if (insideMethod) {
+                methodInstrs.add(instr);
+            }
+        }
+
+        cw.visitEnd();
+        try (FileOutputStream fos = new FileOutputStream(className + ".class")) {
+            fos.write(cw.toByteArray());
+        }
+    }
+
+    private void generateMethod(ClassWriter cw, String className, List<TACInstruction> instrs) {
+        TACInstruction entry = instrs.get(0);
+        String methodName = entry.target;
+        String signature = entry.arg2;
+
+        String simpleName = methodName;
+        if (methodName.contains(".")) {
+             simpleName = methodName.substring(methodName.lastIndexOf('.') + 1);
+        }
+
+        int access = Opcodes.ACC_PUBLIC;
+        if (simpleName.equals("main")) access |= Opcodes.ACC_STATIC;
+
+        if (signature == null) signature = "()V";
+
+        MethodVisitor mv = cw.visitMethod(access, simpleName, signature, null, null);
+        mv.visitCode();
+
+        varMap.clear();
+        varIsRef.clear();
+        nextVarIndex = 0;
+        labelMap.clear();
+
+        for (TACInstruction i : instrs) {
+            if (i.op == OpCode.LABEL) {
+                labelMap.put(i.target, new Label());
+            }
+        }
+
+        for (TACInstruction instr : instrs) {
+            switch (instr.op) {
+                case PARAM_DECL:
+                    getVarIndex(instr.target);
+                    if (instr.arg1 != null && (instr.arg1.startsWith("L") || instr.arg1.startsWith("["))) {
+                        varIsRef.put(instr.target, true);
+                    } else if (instr.target.equals("this")) {
+                        varIsRef.put("this", true);
+                    }
+                    break;
+                case LABEL:
+                    mv.visitLabel(getLabel(instr.target));
+                    break;
+                case LOAD_CONST:
+                    visitLdc(mv, instr.arg1);
+                    storeVar(mv, instr.target, isRefType(instr.arg1));
+                    break;
+                case LOAD_VAR:
+                    loadVar(mv, instr.arg1);
+                    storeVar(mv, instr.target, isRef(instr.arg1));
+                    break;
+                case STORE_VAR:
+                    loadVar(mv, instr.arg1);
+                    storeVar(mv, instr.target, isRef(instr.arg1));
+                    break;
+                case ADD:
+                    loadVar(mv, instr.arg1); loadVar(mv, instr.arg2); mv.visitInsn(Opcodes.IADD); storeVar(mv, instr.target, false); break;
+                case SUB:
+                    loadVar(mv, instr.arg1); loadVar(mv, instr.arg2); mv.visitInsn(Opcodes.ISUB); storeVar(mv, instr.target, false); break;
+                case MUL:
+                    loadVar(mv, instr.arg1); loadVar(mv, instr.arg2); mv.visitInsn(Opcodes.IMUL); storeVar(mv, instr.target, false); break;
+                case DIV:
+                    loadVar(mv, instr.arg1); loadVar(mv, instr.arg2); mv.visitInsn(Opcodes.IDIV); storeVar(mv, instr.target, false); break;
+                case AND:
+                    loadVar(mv, instr.arg1); loadVar(mv, instr.arg2); mv.visitInsn(Opcodes.IAND); storeVar(mv, instr.target, false); break;
+                case OR:
+                    loadVar(mv, instr.arg1); loadVar(mv, instr.arg2); mv.visitInsn(Opcodes.IOR); storeVar(mv, instr.target, false); break;
+                case NOT:
+                    loadVar(mv, instr.arg1); mv.visitInsn(Opcodes.ICONST_1); mv.visitInsn(Opcodes.IXOR); storeVar(mv, instr.target, false); break;
+                case NEG:
+                    loadVar(mv, instr.arg1); mv.visitInsn(Opcodes.INEG); storeVar(mv, instr.target, false); break;
+
+                case PARAM:
+                    loadVar(mv, instr.target);
+                    break;
+
+                case CALL_VIRTUAL:
+                    String mName = instr.arg2;
+                    String callSig = "()I";
+                    if (mName.contains(":")) {
+                        String[] p = mName.split(":");
+                        mName = p[0];
+                        if (p.length > 1) callSig = p[1];
+                    }
+                    String cName = "Main";
+                    String meth = mName;
+                    if (mName.contains(".")) {
+                        String[] p = mName.split("\\.");
+                        cName = p[0];
+                        meth = p[1];
+                    }
+                    mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, cName, meth, callSig, false);
+                    String retType = callSig.substring(callSig.lastIndexOf(')') + 1);
+                    if (!retType.equals("V")) {
+                         boolean isRetRef = retType.startsWith("L") || retType.startsWith("[");
+                         storeVar(mv, instr.target, isRetRef);
+                    }
+                    break;
+
+                case NEW_ALLOC:
+                    mv.visitTypeInsn(Opcodes.NEW, instr.arg1);
+                    mv.visitInsn(Opcodes.DUP);
+                    break;
+
+                case NEW_CONSTRUCT:
+                     String clsCons = instr.arg1;
+                     String sigCons = instr.arg2;
+                     if (sigCons == null) sigCons = "()V";
+                     mv.visitMethodInsn(Opcodes.INVOKESPECIAL, clsCons, "<init>", sigCons, false);
+                     storeVar(mv, instr.target, true);
+                     break;
+
+                case GET_FIELD:
+                     loadVar(mv, instr.arg1);
+                     String[] fp = instr.arg2.split(":");
+                     String fClass = fp.length > 1 ? fp[0] : "Main";
+                     String fName = fp.length > 1 ? fp[1] : instr.arg2;
+                     mv.visitFieldInsn(Opcodes.GETFIELD, fClass, fName, "I");
+                     storeVar(mv, instr.target, false);
+                     break;
+
+                case PUT_FIELD:
+                     loadVar(mv, instr.target);
+                     loadVar(mv, instr.arg2);
+                     String[] fp2 = instr.arg1.split(":");
+                     String fClass2 = fp2.length > 1 ? fp2[0] : "Main";
+                     String fName2 = fp2.length > 1 ? fp2[1] : instr.arg1;
+                     mv.visitFieldInsn(Opcodes.PUTFIELD, fClass2, fName2, "I");
+                     break;
+
+                case RETURN:
+                    if (instr.target != null) {
+                         loadVar(mv, instr.target);
+                         mv.visitInsn(Opcodes.IRETURN);
                     } else {
-                        if (signature != null) out.println(".method public " + realName + signature);
-                        else out.println(".method public " + realName + "()I"); // Fallback
+                         mv.visitInsn(Opcodes.RETURN);
                     }
-                } else {
-                    if (signature != null) out.println(".method public static " + methodName + signature);
-                    else out.println(".method public static " + methodName + "()V");
-                }
+                    break;
 
-                out.println("   .limit stack 100");
-                out.println("   .limit locals 100");
+                case IFZ:
+                    loadVar(mv, instr.target);
+                    mv.visitJumpInsn(Opcodes.IFEQ, getLabel(instr.arg1));
+                    break;
 
-                if (isConstructor) {
-                    out.println("   aload_0");
-                    out.println("   invokespecial java/lang/Object/<init>()V");
-                }
-                break;
+                case GOTO:
+                    mv.visitJumpInsn(Opcodes.GOTO, getLabel(instr.target));
+                    break;
 
-             case PARAM_DECL:
-                 // arg1 is descriptor
-                 boolean isRefParam = false;
-                 if (instr.arg1 != null && (instr.arg1.startsWith("L") || instr.arg1.startsWith("["))) {
-                     isRefParam = true;
-                 }
-                 if (instr.target.equals("this")) {
-                     varMap.put("this", 0);
-                     varIsRef.put("this", true);
-                     if (nextVarIndex == 0) nextVarIndex = 1;
-                 } else {
-                     if (!varMap.containsKey(instr.target)) {
-                         varMap.put(instr.target, nextVarIndex++);
-                         varIsRef.put(instr.target, isRefParam);
-                     }
-                 }
-                 break;
-
-             case FUNC_EXIT:
-                 if (currentMethodName != null) {
-                     if (!lastOpWasReturn) {
-                         out.println("   return");
-                     }
-                     out.println(".end method");
-                     out.println();
-                     currentMethodName = null;
-                 }
-                 break;
-
-             case LABEL:
-                 out.println(instr.target + ":");
-                 break;
-
-             case NEW:
-                 // Backward compatibility or fallback if needed, but we use NEW_ALLOC/NEW_CONSTRUCT now.
-                 // Treat as no-arg instantiation for safety if encountered.
-                 String clsOld = instr.arg1;
-                 out.println("   new " + clsOld);
-                 out.println("   dup");
-                 out.println("   invokespecial " + clsOld + "/<init>()V");
-                 storeVar(out, instr.target, true);
-                 break;
-
-             case NEW_ALLOC:
-                 String clsAlloc = instr.arg1;
-                 out.println("   new " + clsAlloc);
-                 out.println("   dup");
-                 // Do NOT store yet. The stack has [ref, ref].
-                 // We leave them there.
-                 // Note: This relies on the fact that subsequent PARAM instructions push args,
-                 // and then NEW_CONSTRUCT consumes [ref, args].
-                 // The other [ref] remains as the result.
-                 break;
-
-             case NEW_CONSTRUCT:
-                 String clsCons = instr.arg1;
-                 String sigCons = instr.arg2;
-                 if (sigCons == null) sigCons = "()V";
-                 out.println("   invokespecial " + clsCons + "/<init>" + sigCons);
-                 // Now stack has [ref] (the initialized object).
-                 storeVar(out, instr.target, true);
-                 break;
-
-             case LOAD_CONST:
-                 boolean isRef = false;
-                 try {
-                      int val = Integer.parseInt(instr.arg1);
-                      if (val >= -128 && val <= 127) out.println("   bipush " + val);
-                      else if (val >= -32768 && val <= 32767) out.println("   sipush " + val);
-                      else out.println("   ldc " + val);
-                 } catch (Exception e) {
-                      if (instr.arg1.equals("true")) out.println("   iconst_1");
-                      else if (instr.arg1.equals("false")) out.println("   iconst_0");
-                      else if (instr.arg1.equals("null")) { out.println("   aconst_null"); isRef = true; }
-                      else { out.println("   ldc " + instr.arg1); isRef = true; }
-                 }
-                 storeVar(out, instr.target, isRef);
-                 break;
-
-             case LOAD_VAR:
-                 loadVar(out, instr.arg1);
-                 storeVar(out, instr.target, isRef(instr.arg1));
-                 break;
-
-             case STORE_VAR:
-                 loadVar(out, instr.arg1);
-                 storeVar(out, instr.target, isRef(instr.arg1));
-                 break;
-
-             case CALL_VIRTUAL:
-                 String mName = instr.arg2;
-                 String callSig = "()I"; // Default
-
-                 if (mName.contains(":")) {
-                     String[] p = mName.split(":");
-                     mName = p[0];
-                     if (p.length > 1) {
-                         callSig = p[1];
-                     }
-                 }
-
-                 String cName = "Main";
-                 String meth = mName;
-                 if (mName.contains(".")) {
-                     String[] p = mName.split("\\.");
-                     cName = p[0];
-                     meth = p[1];
-                 }
-
-                 out.println("   invokevirtual " + cName + "/" + meth + callSig);
-
-                 String retType = "";
-                 if (callSig.contains(")")) {
-                     retType = callSig.substring(callSig.lastIndexOf(')') + 1);
-                 }
-
-                 if (!retType.equals("V")) {
-                     boolean isRetRef = retType.startsWith("L") || retType.startsWith("[");
-                     storeVar(out, instr.target, isRetRef);
-                 }
-                 break;
-
-             case GET_FIELD:
-                 loadVar(out, instr.arg1);
-                 String[] fp = instr.arg2.split(":");
-                 String fClass = fp.length > 1 ? fp[0] : "Main";
-                 String fName = fp.length > 1 ? fp[1] : instr.arg2;
-                 out.println("   getfield " + fClass + "/" + fName + " I");
-                 storeVar(out, instr.target, false);
-                 break;
-
-             case PUT_FIELD:
-                 loadVar(out, instr.target);
-                 loadVar(out, instr.arg2);
-                 String[] fp2 = instr.arg1.split(":");
-                 String fClass2 = fp2.length > 1 ? fp2[0] : "Main";
-                 String fName2 = fp2.length > 1 ? fp2[1] : instr.arg1;
-                 out.println("   putfield " + fClass2 + "/" + fName2 + " I");
-                 break;
-
-             case RETURN:
-                 if (instr.target != null) {
-                     loadVar(out, instr.target);
-                     out.println("   ireturn");
-                 } else {
-                     out.println("   return");
-                 }
-                 isReturn = true;
-                 break;
-
-             case IFZ:
-                 loadVar(out, instr.target);
-                 out.println("   ifeq " + instr.arg1);
-                 break;
-
-             case GOTO:
-                 out.println("   goto " + instr.target);
-                 break;
-
-             case PARAM:
-                 loadVar(out, instr.target);
-                 break;
-
-             case ADD:
-                loadVar(out, instr.arg1); loadVar(out, instr.arg2); out.println("   iadd"); storeVar(out, instr.target, false); break;
-             case SUB:
-                loadVar(out, instr.arg1); loadVar(out, instr.arg2); out.println("   isub"); storeVar(out, instr.target, false); break;
-             case MUL:
-                loadVar(out, instr.arg1); loadVar(out, instr.arg2); out.println("   imul"); storeVar(out, instr.target, false); break;
-             case DIV:
-                loadVar(out, instr.arg1); loadVar(out, instr.arg2); out.println("   idiv"); storeVar(out, instr.target, false); break;
-
-             case AND:
-                loadVar(out, instr.arg1); loadVar(out, instr.arg2); out.println("   iand"); storeVar(out, instr.target, false); break;
-             case OR:
-                loadVar(out, instr.arg1); loadVar(out, instr.arg2); out.println("   ior"); storeVar(out, instr.target, false); break;
-             case NOT:
-                loadVar(out, instr.arg1); out.println("   iconst_1"); out.println("   ixor"); storeVar(out, instr.target, false); break;
-             case NEG:
-                loadVar(out, instr.arg1); out.println("   ineg"); storeVar(out, instr.target, false); break;
-
-             case EQ:
-             case NEQ:
-             case LT:
-             case GT:
-             case LE:
-             case GE:
-                 genCompare(out, instr);
-                 break;
-
-             default:
-                break;
+                case EQ: loadVar(mv, instr.arg1); loadVar(mv, instr.arg2); genCompare(mv, Opcodes.IF_ICMPEQ, instr.target); break;
+                case NEQ: loadVar(mv, instr.arg1); loadVar(mv, instr.arg2); genCompare(mv, Opcodes.IF_ICMPNE, instr.target); break;
+                case LT: loadVar(mv, instr.arg1); loadVar(mv, instr.arg2); genCompare(mv, Opcodes.IF_ICMPLT, instr.target); break;
+                case GE: loadVar(mv, instr.arg1); loadVar(mv, instr.arg2); genCompare(mv, Opcodes.IF_ICMPGE, instr.target); break;
+                case GT: loadVar(mv, instr.arg1); loadVar(mv, instr.arg2); genCompare(mv, Opcodes.IF_ICMPGT, instr.target); break;
+                case LE: loadVar(mv, instr.arg1); loadVar(mv, instr.arg2); genCompare(mv, Opcodes.IF_ICMPLE, instr.target); break;
+            }
         }
 
-        lastOpWasReturn = isReturn;
+        mv.visitMaxs(0, 0);
+        mv.visitEnd();
     }
 
-    private void genCompare(PrintWriter out, TACInstruction instr) {
-        loadVar(out, instr.arg1);
-        loadVar(out, instr.arg2);
-        String labelTrue = "True" + System.nanoTime();
-        String labelEnd = "End" + System.nanoTime();
-
-        String jump = switch(instr.op) {
-            case EQ -> "if_icmpeq";
-            case NEQ -> "if_icmpne";
-            case LT -> "if_icmplt";
-            case GE -> "if_icmpge";
-            case GT -> "if_icmpgt";
-            case LE -> "if_icmple";
-            default -> "nop";
-        };
-
-        out.println("   " + jump + " " + labelTrue);
-        out.println("   iconst_0");
-        out.println("   goto " + labelEnd);
-        out.println(labelTrue + ":");
-        out.println("   iconst_1");
-        out.println(labelEnd + ":");
-        storeVar(out, instr.target, false);
+    private void genCompare(MethodVisitor mv, int opcode, String target) {
+        Label lTrue = new Label();
+        Label lEnd = new Label();
+        mv.visitJumpInsn(opcode, lTrue);
+        mv.visitInsn(Opcodes.ICONST_0);
+        mv.visitJumpInsn(Opcodes.GOTO, lEnd);
+        mv.visitLabel(lTrue);
+        mv.visitInsn(Opcodes.ICONST_1);
+        mv.visitLabel(lEnd);
+        storeVar(mv, target, false);
     }
 
-    private void loadVar(PrintWriter out, String name) {
-        if (!varMap.containsKey(name)) {
-            varMap.put(name, varMap.size());
-            varIsRef.put(name, false);
-        }
-        int idx = varMap.get(name);
-        boolean isRef = varIsRef.getOrDefault(name, false);
-        if (isRef) out.println("   aload " + idx);
-        else out.println("   iload " + idx);
+    private void visitLdc(MethodVisitor mv, String val) {
+         try {
+              int v = Integer.parseInt(val);
+              if (v >= -1 && v <= 5) mv.visitInsn(Opcodes.ICONST_0 + v);
+              else if (v >= -128 && v <= 127) mv.visitIntInsn(Opcodes.BIPUSH, v);
+              else if (v >= -32768 && v <= 32767) mv.visitIntInsn(Opcodes.SIPUSH, v);
+              else mv.visitLdcInsn(v);
+         } catch (Exception e) {
+              if (val.equals("true")) mv.visitInsn(Opcodes.ICONST_1);
+              else if (val.equals("false")) mv.visitInsn(Opcodes.ICONST_0);
+              else if (val.equals("null")) mv.visitInsn(Opcodes.ACONST_NULL);
+              else mv.visitLdcInsn(val);
+         }
     }
 
-    private void storeVar(PrintWriter out, String name, boolean isRef) {
+    private Label getLabel(String name) {
+        return labelMap.computeIfAbsent(name, k -> new Label());
+    }
+
+    private int getVarIndex(String name) {
         if (!varMap.containsKey(name)) {
             varMap.put(name, nextVarIndex++);
         }
+        return varMap.get(name);
+    }
+
+    private void loadVar(MethodVisitor mv, String name) {
+        int idx = getVarIndex(name);
+        boolean isRef = varIsRef.getOrDefault(name, false);
+        mv.visitVarInsn(isRef ? Opcodes.ALOAD : Opcodes.ILOAD, idx);
+    }
+
+    private void storeVar(MethodVisitor mv, String name, boolean isRef) {
+        int idx = getVarIndex(name);
         varIsRef.put(name, isRef);
-        int idx = varMap.get(name);
-        if (isRef) out.println("   astore " + idx);
-        else out.println("   istore " + idx);
+        mv.visitVarInsn(isRef ? Opcodes.ASTORE : Opcodes.ISTORE, idx);
+    }
+
+    private boolean isRefType(String val) {
+         try { Integer.parseInt(val); return false; } catch(Exception e) {}
+         if (val.equals("true") || val.equals("false")) return false;
+         return true;
     }
 
     private boolean isRef(String name) {

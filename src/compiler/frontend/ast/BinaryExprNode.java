@@ -26,8 +26,8 @@ public class BinaryExprNode extends ExpressionNode {
     }
 
     @Override
-    public void accept(ASTVisitor visitor) {
-        visitor.visitBinaryExprNode(this);
+    public <T> T accept(ASTVisitor<T> visitor) {
+        return visitor.visitBinaryExprNode(this);
     }
 
     @Override

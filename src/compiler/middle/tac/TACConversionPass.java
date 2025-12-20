@@ -9,12 +9,11 @@ import compiler.infra.CompilerContext;
 import compiler.infra.CompilerPass;
 import compiler.frontend.ast.*;
 
-public class TACConversionPass implements CompilerPass, ASTVisitor {
+public class TACConversionPass implements CompilerPass, ASTVisitor<String> {
 
     private final List<TACInstruction> instructions = new ArrayList<>();
     private int tempCount = 0;
     private int labelCount = 0;
-    private String lastResult;
     private String currentClass;
 
     // Map<ClassName, Map<MethodName, Signature>>
@@ -62,7 +61,7 @@ public class TACConversionPass implements CompilerPass, ASTVisitor {
                          }
                          sig.append(")").append(getDescriptor(m.returnType));
 
-                         // Constructor return type fix (constructors return void in bytecode signature)
+                         // Constructor return type fix
                          if (m.returnType.equals(c.className)) {
                              int idx = sig.lastIndexOf(")");
                              if (idx != -1) {
@@ -87,34 +86,26 @@ public class TACConversionPass implements CompilerPass, ASTVisitor {
     }
 
     @Override
-    public void visitLiteralNode(LiteralNode node) {
+    public String visitLiteralNode(LiteralNode node) {
         String temp = newTemp();
         emit(OpCode.LOAD_CONST, temp, node.value.toString(), null);
-        lastResult = temp;
+        return temp;
     }
 
     @Override
-    public void visitIdentifierNode(IdentifierNode node) {
-        // Identifier as an expression evaluates to its value.
-        // We load it into a temp if it's a local var usage.
-
-        // Check if it's 'this'
+    public String visitIdentifierNode(IdentifierNode node) {
         if ("this".equals(node.name)) {
-            lastResult = "this";
-            return;
+            return "this";
         }
-
         String temp = newTemp();
         emit(OpCode.LOAD_VAR, temp, node.name, null);
-        lastResult = temp;
+        return temp;
     }
 
     @Override
-    public void visitBinaryOpNode(BinaryOpNode node) {
-        node.left.accept(this);
-        String left = lastResult;
-        node.right.accept(this);
-        String right = lastResult;
+    public String visitBinaryOpNode(BinaryOpNode node) {
+        String left = node.left.accept(this);
+        String right = node.right.accept(this);
 
         String temp = newTemp();
         OpCode op = switch(node.op) {
@@ -134,48 +125,42 @@ public class TACConversionPass implements CompilerPass, ASTVisitor {
         };
 
         emit(op, temp, left, right);
-        lastResult = temp;
+        return temp;
     }
 
     @Override
-    public void visitVarDeclNode(VarDeclNode node) {
+    public String visitVarDeclNode(VarDeclNode node) {
         if (node.initializer != null) {
-            node.initializer.accept(this);
-            String value = lastResult;
+            String value = node.initializer.accept(this);
             emit(OpCode.STORE_VAR, node.name, value, null);
         }
+        return null;
     }
 
     @Override
-    public void visitAssignmentNode(AssignmentNode node) {
-        node.expression.accept(this);
-        String value = lastResult;
-
-        // Handle target.
-        // If target is Identifier, simple STORE_VAR.
-        // If target is MemberAccess, PUT_FIELD.
+    public String visitAssignmentNode(AssignmentNode node) {
+        String value = node.expression.accept(this);
 
         if (node.target instanceof IdentifierNode) {
             String targetName = ((IdentifierNode)node.target).name;
             emit(OpCode.STORE_VAR, targetName, value, null);
-            lastResult = targetName;
+            return value;
         } else if (node.target instanceof MemberAccessNode) {
             MemberAccessNode man = (MemberAccessNode) node.target;
-            man.object.accept(this);
-            String obj = lastResult;
+            String obj = man.object.accept(this);
             String fieldName = man.memberName;
             if (man.object.type != null) {
                 fieldName = man.object.type + ":" + fieldName;
             }
             emit(OpCode.PUT_FIELD, obj, fieldName, value);
-            lastResult = value; // Assignment result is the value
+            return value;
         } else {
              throw new RuntimeException("Unsupported assignment target");
         }
     }
 
     @Override
-    public void visitFunctionDeclNode(FunctionDeclNode node) {
+    public String visitFunctionDeclNode(FunctionDeclNode node) {
         StringBuilder sig = new StringBuilder("(");
         for (VarDeclNode param : node.getParams()) {
             sig.append(getDescriptor(param.type));
@@ -184,7 +169,6 @@ public class TACConversionPass implements CompilerPass, ASTVisitor {
 
         emit(OpCode.FUNC_ENTRY, node.name, String.valueOf(node.getParams().size()), sig.toString());
 
-        // Emit params declarations
         for (VarDeclNode param : node.getParams()) {
              emit(OpCode.PARAM_DECL, param.name, getDescriptor(param.type), null);
         }
@@ -193,22 +177,18 @@ public class TACConversionPass implements CompilerPass, ASTVisitor {
 
         node.body.accept(this);
 
-        // Implicit return if missing (for void)
         if (node.returnType.equals("void")) {
              emit(OpCode.RETURN, null, null, null);
         }
         emit(OpCode.FUNC_EXIT, node.name, null, null);
 
-        lastResult = null;
+        return null;
     }
 
     @Override
-    public void visitBinaryExprNode(BinaryExprNode node) {
-         // Duplicate of BinaryOpNode logic if used
-        node.getLeft().accept(this);
-        String left = lastResult;
-        node.getRight().accept(this);
-        String right = lastResult;
+    public String visitBinaryExprNode(BinaryExprNode node) {
+        String left = node.getLeft().accept(this);
+        String right = node.getRight().accept(this);
 
         String temp = newTemp();
         OpCode op = switch(node.getOp()) {
@@ -228,35 +208,35 @@ public class TACConversionPass implements CompilerPass, ASTVisitor {
         };
 
         emit(op, temp, left, right);
-        lastResult = temp;
+        return temp;
     }
 
     @Override
-    public void visitBlockNode(BlockNode node) {
+    public String visitBlockNode(BlockNode node) {
         for (ASTNode stmt : node.getStatements()) {
             stmt.accept(this);
         }
+        return null;
     }
 
     @Override
-    public void visitReturnNode(ReturnNode node) {
+    public String visitReturnNode(ReturnNode node) {
         String val = null;
         if (node.getExpr() != null) {
-            node.getExpr().accept(this);
-            val = lastResult;
+            val = node.getExpr().accept(this);
         }
         emit(OpCode.RETURN, val, null, null);
+        return null;
     }
 
     @Override
-    public void visitIfNode(IfNode node) {
+    public String visitIfNode(IfNode node) {
         String elseLabel = newLabel();
         String endLabel = newLabel();
 
-        node.getCond().accept(this);
-        String cond = lastResult;
+        String cond = node.getCond().accept(this);
 
-        emit(OpCode.IFZ, cond, elseLabel, null); // Jump to else if false (zero)
+        emit(OpCode.IFZ, cond, elseLabel, null);
 
         node.getThenBlock().accept(this);
         emit(OpCode.GOTO, endLabel, null, null);
@@ -267,17 +247,17 @@ public class TACConversionPass implements CompilerPass, ASTVisitor {
         }
 
         emit(OpCode.LABEL, endLabel, null, null);
+        return null;
     }
 
     @Override
-    public void visitWhileNode(WhileNode node) {
+    public String visitWhileNode(WhileNode node) {
         String startLabel = newLabel();
         String endLabel = newLabel();
 
         emit(OpCode.LABEL, startLabel, null, null);
 
-        node.getCond().accept(this);
-        String cond = lastResult;
+        String cond = node.getCond().accept(this);
 
         emit(OpCode.IFZ, cond, endLabel, null);
 
@@ -285,10 +265,11 @@ public class TACConversionPass implements CompilerPass, ASTVisitor {
         emit(OpCode.GOTO, startLabel, null, null);
 
         emit(OpCode.LABEL, endLabel, null, null);
+        return null;
     }
 
     @Override
-    public void visitForNode(ForNode node) {
+    public String visitForNode(ForNode node) {
         String startLabel = newLabel();
         String endLabel = newLabel();
 
@@ -299,8 +280,7 @@ public class TACConversionPass implements CompilerPass, ASTVisitor {
         emit(OpCode.LABEL, startLabel, null, null);
 
         if (node.getCond() != null) {
-            node.getCond().accept(this);
-            String cond = lastResult;
+            String cond = node.getCond().accept(this);
             emit(OpCode.IFZ, cond, endLabel, null);
         }
 
@@ -312,12 +292,12 @@ public class TACConversionPass implements CompilerPass, ASTVisitor {
 
         emit(OpCode.GOTO, startLabel, null, null);
         emit(OpCode.LABEL, endLabel, null, null);
+        return null;
     }
 
     @Override
-    public void visitUnaryOpNode(UnaryOpNode node) {
-        node.expr.accept(this);
-        String val = lastResult;
+    public String visitUnaryOpNode(UnaryOpNode node) {
+        String val = node.expr.accept(this);
         String temp = newTemp();
 
         OpCode op = switch(node.op) {
@@ -327,16 +307,16 @@ public class TACConversionPass implements CompilerPass, ASTVisitor {
         };
 
         emit(op, temp, val, null);
-        lastResult = temp;
+        return temp;
     }
 
     @Override
-    public void visitEmptyNode(EmptyNode emptyNode) {
-        // No-op
+    public String visitEmptyNode(EmptyNode emptyNode) {
+        return null;
     }
 
     @Override
-    public void visitClassDeclNode(ClassDeclNode node) {
+    public String visitClassDeclNode(ClassDeclNode node) {
         String prevClass = currentClass;
         currentClass = node.className;
 
@@ -346,8 +326,7 @@ public class TACConversionPass implements CompilerPass, ASTVisitor {
 
         for (FunctionDeclNode method : node.methods) {
             String mangledName = node.className + "." + method.name;
-            // Add params to size, include implicit 'this' (1 + params)
-            int paramCount = 1 + method.getParams().size();
+            int paramCount = 1 + method.getParams().size(); // +1 for this
 
             StringBuilder sig = new StringBuilder("(");
             for (VarDeclNode param : method.getParams()) {
@@ -355,7 +334,6 @@ public class TACConversionPass implements CompilerPass, ASTVisitor {
             }
             sig.append(")").append(getDescriptor(method.returnType));
 
-            // If constructor, return type is V in bytecode
             if (method.returnType.equals(node.className)) {
                  int closeParen = sig.lastIndexOf(")");
                  sig.replace(closeParen + 1, sig.length(), "V");
@@ -363,10 +341,6 @@ public class TACConversionPass implements CompilerPass, ASTVisitor {
 
             emit(OpCode.FUNC_ENTRY, mangledName, String.valueOf(paramCount), sig.toString());
 
-            // Param declarations
-            // For instance methods, do we emit 'this'?
-            // IdentifierNode visitor uses "this".
-            // If we emit PARAM_DECL "this", we map it to 0.
             emit(OpCode.PARAM_DECL, "this", "L" + node.className + ";", null);
 
             for (VarDeclNode param : method.getParams()) {
@@ -384,33 +358,24 @@ public class TACConversionPass implements CompilerPass, ASTVisitor {
         }
 
         currentClass = prevClass;
+        return null;
     }
 
     @Override
-    public void visitNewExprNode(NewExprNode node) {
-        // 1. Emit NEW_ALLOC to allocate object and duplicate it on stack
-        // Result is stored in temp, but we don't use it immediately for params.
-        // We use NEW_ALLOC to represent "new Class; dup".
-        // The result of NEW_ALLOC is theoretically the object reference, but we can't store it yet if uninitialized.
-        // However, BytecodeGen will emit "new; dup".
-
+    public String visitNewExprNode(NewExprNode node) {
         String temp = newTemp();
         emit(OpCode.NEW_ALLOC, temp, node.className, null);
 
-        // 2. Emit params (loads args onto stack)
         List<String> argTemps = new ArrayList<>();
         for (ASTNode arg : node.args) {
-            arg.accept(this);
-            argTemps.add(lastResult);
+            argTemps.add(arg.accept(this));
         }
 
         for (String arg : argTemps) {
             emit(OpCode.PARAM, arg, null, null);
         }
 
-        // 3. Emit NEW_CONSTRUCT to call constructor (invokespecial)
-        // Find constructor signature
-        String signature = "()V"; // Default
+        String signature = "()V";
         if (methodSignatures.containsKey(node.className)) {
             Map<String, String> methods = methodSignatures.get(node.className);
             if (methods != null && methods.containsKey(node.className)) {
@@ -418,34 +383,28 @@ public class TACConversionPass implements CompilerPass, ASTVisitor {
             }
         }
 
-        // Target of CONSTRUCT is the same temp (the initialized object)
-        // arg1 = className, arg2 = signature
         emit(OpCode.NEW_CONSTRUCT, temp, node.className, signature);
-        lastResult = temp;
+        return temp;
     }
 
     @Override
-    public void visitMethodCallNode(MethodCallNode node) {
+    public String visitMethodCallNode(MethodCallNode node) {
         String obj = null;
         String className = null;
 
         if (node.object != null) {
-            node.object.accept(this);
-            obj = lastResult;
-            className = node.object.type; // Type set by TypeCheckingVisitor
+            obj = node.object.accept(this);
+            className = node.object.type;
         } else {
-            // Implicit this?
             obj = "this";
             className = currentClass;
         }
 
         String methodName = node.methodName;
-        String signature = "()I"; // Default fallback
+        String signature = "()I";
 
-        // Mangle method name and find signature if class is known
         if (className != null && !className.equals("int") && !className.equals("boolean") && !className.equals("string")) {
              methodName = className + "." + node.methodName;
-
              if (methodSignatures.containsKey(className)) {
                  Map<String, String> methods = methodSignatures.get(className);
                  if (methods != null && methods.containsKey(node.methodName)) {
@@ -454,13 +413,11 @@ public class TACConversionPass implements CompilerPass, ASTVisitor {
              }
         }
 
-        // Emit PARAM for object (receiver)
         emit(OpCode.PARAM, obj, null, null);
 
         List<String> argTemps = new ArrayList<>();
         for (ASTNode arg : node.args) {
-            arg.accept(this);
-            argTemps.add(lastResult);
+            argTemps.add(arg.accept(this));
         }
 
         for (String arg : argTemps) {
@@ -468,21 +425,19 @@ public class TACConversionPass implements CompilerPass, ASTVisitor {
         }
 
         String temp = newTemp();
-        // Pass signature in instruction
         emit(OpCode.CALL_VIRTUAL, temp, obj, methodName + ":" + signature);
-        lastResult = temp;
+        return temp;
     }
 
     @Override
-    public void visitMemberAccessNode(MemberAccessNode node) {
-        node.object.accept(this);
-        String obj = lastResult;
+    public String visitMemberAccessNode(MemberAccessNode node) {
+        String obj = node.object.accept(this);
         String temp = newTemp();
         String fieldName = node.memberName;
         if (node.object.type != null) {
             fieldName = node.object.type + ":" + fieldName;
         }
         emit(OpCode.GET_FIELD, temp, obj, fieldName);
-        lastResult = temp;
+        return temp;
     }
 }

@@ -17,7 +17,7 @@ public class ForNode extends StatementNode {
     public ASTNode getUpdate() { return update; }
     public ASTNode getBody() { return body; }
 
-    @Override public void accept(ASTVisitor visitor) { visitor.visitForNode(this); }
+    @Override public <T> T accept(ASTVisitor<T> visitor) { return visitor.visitForNode(this); }
 
     @Override
     public ASTTestTree toASTTestTree() {

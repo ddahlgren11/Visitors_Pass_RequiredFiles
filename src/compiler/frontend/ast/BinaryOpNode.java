@@ -13,8 +13,8 @@ public class BinaryOpNode extends ExpressionNode {
     }
 
     @Override
-    public void accept(ASTVisitor visitor) {
-        visitor.visitBinaryOpNode(this);
+    public <T> T accept(ASTVisitor<T> visitor) {
+        return visitor.visitBinaryOpNode(this);
     }
 
     @Override

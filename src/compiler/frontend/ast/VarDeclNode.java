@@ -17,7 +17,7 @@ public class VarDeclNode extends StatementNode {
     public String getName() { return name; }
     public ExpressionNode getInitializer() { return initializer; }
 
-    @Override public void accept(ASTVisitor visitor) { visitor.visitVarDeclNode(this); }
+    @Override public <T> T accept(ASTVisitor<T> visitor) { return visitor.visitVarDeclNode(this); }
 
     @Override
     public ASTTestTree toASTTestTree() {
