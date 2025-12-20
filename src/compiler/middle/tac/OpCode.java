@@ -17,6 +17,8 @@ public enum OpCode {
     CALL_STATIC,
     CALL_VIRTUAL,
     NEW,
+    NEW_ALLOC,     // Allocate memory (new Class; dup)
+    NEW_CONSTRUCT, // Call constructor (invokespecial)
     GET_FIELD,
     PUT_FIELD,
     EQ,
