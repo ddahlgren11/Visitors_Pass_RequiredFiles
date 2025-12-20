@@ -11,8 +11,8 @@ public class MemberAccessNode extends ExpressionNode {
     }
 
     @Override
-    public void accept(ASTVisitor visitor) {
-        visitor.visitMemberAccessNode(this);
+    public <T> T accept(ASTVisitor<T> visitor) {
+        return visitor.visitMemberAccessNode(this);
     }
 
     @Override

@@ -1,2 +1,2 @@
 #!/bin/bash
-java -jar lib/junit.jar -cp out --scan-classpath
+java -jar lib/junit.jar -cp out:lib/asm.jar --scan-classpath

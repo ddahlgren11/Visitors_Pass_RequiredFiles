@@ -13,7 +13,7 @@ public class WhileNode extends StatementNode {
     public ExpressionNode getCond() { return cond; }
     public ASTNode getBody() { return body; }
 
-    @Override public void accept(ASTVisitor visitor) { visitor.visitWhileNode(this); }
+    @Override public <T> T accept(ASTVisitor<T> visitor) { return visitor.visitWhileNode(this); }
 
     @Override
     public ASTTestTree toASTTestTree() {

@@ -4,23 +4,23 @@ package compiler.frontend.ast;
  * Generic visitor interface for the frontend AST.
  * @param <T> visitor result type
  */
-public interface ASTVisitor {
-    void visitBinaryExprNode(BinaryExprNode node);
-    void visitBinaryOpNode(BinaryOpNode node);
-    void visitAssignmentNode(AssignmentNode node);
-    void visitVarDeclNode(VarDeclNode node);
-    void visitLiteralNode(LiteralNode node);
-    void visitIdentifierNode(IdentifierNode node);
-    void visitBlockNode(BlockNode node);
-    void visitFunctionDeclNode(FunctionDeclNode node);
-    void visitReturnNode(ReturnNode node);
-    void visitIfNode(IfNode node);
-    void visitForNode(ForNode node);
-    void visitWhileNode(WhileNode node);
-    void visitUnaryOpNode(UnaryOpNode node);
-    void visitEmptyNode(EmptyNode emptyNode);
-    void visitClassDeclNode(ClassDeclNode node);
-    void visitNewExprNode(NewExprNode node);
-    void visitMethodCallNode(MethodCallNode node);
-    void visitMemberAccessNode(MemberAccessNode node);
+public interface ASTVisitor<T> {
+    T visitBinaryExprNode(BinaryExprNode node);
+    T visitBinaryOpNode(BinaryOpNode node);
+    T visitAssignmentNode(AssignmentNode node);
+    T visitVarDeclNode(VarDeclNode node);
+    T visitLiteralNode(LiteralNode node);
+    T visitIdentifierNode(IdentifierNode node);
+    T visitBlockNode(BlockNode node);
+    T visitFunctionDeclNode(FunctionDeclNode node);
+    T visitReturnNode(ReturnNode node);
+    T visitIfNode(IfNode node);
+    T visitForNode(ForNode node);
+    T visitWhileNode(WhileNode node);
+    T visitUnaryOpNode(UnaryOpNode node);
+    T visitEmptyNode(EmptyNode emptyNode);
+    T visitClassDeclNode(ClassDeclNode node);
+    T visitNewExprNode(NewExprNode node);
+    T visitMethodCallNode(MethodCallNode node);
+    T visitMemberAccessNode(MemberAccessNode node);
 }

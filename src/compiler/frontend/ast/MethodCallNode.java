@@ -15,8 +15,8 @@ public class MethodCallNode extends ExpressionNode {
     }
 
     @Override
-    public void accept(ASTVisitor visitor) {
-        visitor.visitMethodCallNode(this);
+    public <T> T accept(ASTVisitor<T> visitor) {
+        return visitor.visitMethodCallNode(this);
     }
 
     @Override

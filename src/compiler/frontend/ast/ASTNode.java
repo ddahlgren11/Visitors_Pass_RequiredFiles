@@ -8,7 +8,7 @@ import compiler.frontend.ASTTestTree;
  */
 public abstract class ASTNode {
     /** Accept a visitor and return a visitor-defined result. */
-    public abstract void accept(ASTVisitor visitor);
+    public abstract <T> T accept(ASTVisitor<T> visitor);
 
     public abstract ASTTestTree toASTTestTree();
 }

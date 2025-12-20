@@ -19,7 +19,7 @@ public class FunctionDeclNode extends ASTNode {
     public List<VarDeclNode> getParams() { return params; }
     public BlockNode getBody() { return body; }
 
-    @Override public void accept(ASTVisitor visitor) { visitor.visitFunctionDeclNode(this); }
+    @Override public <T> T accept(ASTVisitor<T> visitor) { return visitor.visitFunctionDeclNode(this); }
 
     @Override
     public ASTTestTree toASTTestTree() {

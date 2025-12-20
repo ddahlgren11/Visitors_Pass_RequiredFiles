@@ -15,8 +15,8 @@ public class ClassDeclNode extends ASTNode {
     }
 
     @Override
-    public void accept(ASTVisitor visitor) {
-        visitor.visitClassDeclNode(this);
+    public <T> T accept(ASTVisitor<T> visitor) {
+        return visitor.visitClassDeclNode(this);
     }
 
     @Override

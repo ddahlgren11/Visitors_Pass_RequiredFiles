@@ -19,9 +19,9 @@ public class GenTest {
 
     @AfterEach
     public void cleanup() {
-        File m = new File("Main.j");
+        File m = new File("Main.class");
         if (m.exists()) m.delete();
-        File p = new File("Point.j");
+        File p = new File("Point.class");
         if (p.exists()) p.delete();
     }
 
@@ -53,45 +53,14 @@ public class GenTest {
 
         orchestrator.runPasses(context);
 
-        // Check Main.j
-        File f = new File("Main.j");
-        assertTrue(f.exists(), "Main.j should exist");
+        // Check Main.class
+        File f = new File("Main.class");
+        assertTrue(f.exists(), "Main.class should exist");
 
-        System.out.println("=== Main.j ===");
-        printFile(f);
+        // Check Point.class
+        File p = new File("Point.class");
+        assertTrue(p.exists(), "Point.class should exist");
 
-        // Check Point.j
-        File p = new File("Point.j");
-        assertTrue(p.exists(), "Point.j should exist");
-
-        System.out.println("=== Point.j ===");
-        printFile(p);
-
-        // Assertions
-        String pointContent = readFile(p);
-        assertTrue(pointContent.contains(".field public x I"));
-        assertTrue(pointContent.contains(".field public y I"));
-        // Definition should be correct now
-        assertTrue(pointContent.contains(".method public set(II)V"));
-
-        String mainContent = readFile(f);
-        assertTrue(mainContent.contains("new Point"));
-        assertTrue(mainContent.contains("invokespecial Point/<init>()V"));
-        // Call site mismatch is expected for now ((II)I vs (II)V)
-        assertTrue(mainContent.contains("invokevirtual Point/set(II)V"));
-    }
-
-    private void printFile(File f) throws Exception {
-        Scanner s = new Scanner(f);
-        while(s.hasNextLine()) System.out.println(s.nextLine());
-        s.close();
-    }
-
-    private String readFile(File f) throws Exception {
-        StringBuilder sb = new StringBuilder();
-        Scanner s = new Scanner(f);
-        while(s.hasNextLine()) sb.append(s.nextLine()).append("\n");
-        s.close();
-        return sb.toString();
+        // Content checks removed as we produce binary .class files now
     }
 }

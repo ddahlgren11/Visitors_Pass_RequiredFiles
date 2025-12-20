@@ -6,7 +6,7 @@ import compiler.middle.SymbolTable;
 import compiler.middle.Symbol;
 import compiler.middle.Kind;
 
-public class SymbolTableBuilderVisitor implements ASTVisitor {
+public class SymbolTableBuilderVisitor implements ASTVisitor<Void> {
     private final SymbolTable table;
     private final Diagnostics diag;
 
@@ -16,34 +16,38 @@ public class SymbolTableBuilderVisitor implements ASTVisitor {
     }
 
     @Override
-    public void visitAssignmentNode(AssignmentNode node) {
+    public Void visitAssignmentNode(AssignmentNode node) {
         node.getTarget().accept(this);
         node.getExpression().accept(this);
+        return null;
     }
 
     @Override
-    public void visitBinaryExprNode(BinaryExprNode node) {
+    public Void visitBinaryExprNode(BinaryExprNode node) {
         node.getLeft().accept(this);
         node.getRight().accept(this);
+        return null;
     }
 
     @Override
-    public void visitBinaryOpNode(BinaryOpNode node) {
+    public Void visitBinaryOpNode(BinaryOpNode node) {
         node.left.accept(this);
         node.right.accept(this);
+        return null;
     }
 
     @Override
-    public void visitBlockNode(BlockNode node) {
+    public Void visitBlockNode(BlockNode node) {
         table.enterScope();
         for (ASTNode statement : node.getStatements()) {
             statement.accept(this);
         }
         table.exitScope();
+        return null;
     }
 
     @Override
-    public void visitForNode(ForNode node) {
+    public Void visitForNode(ForNode node) {
         table.enterScope();
         if (node.getInit() != null) {
             node.getInit().accept(this);
@@ -56,10 +60,11 @@ public class SymbolTableBuilderVisitor implements ASTVisitor {
         }
         node.getBody().accept(this);
         table.exitScope();
+        return null;
     }
 
     @Override
-    public void visitFunctionDeclNode(FunctionDeclNode node) {
+    public Void visitFunctionDeclNode(FunctionDeclNode node) {
         Symbol sym = new Symbol(node.getName(), Kind.FUNCTION, node);
         if (!table.declare(sym)) {
             diag.addError("Duplicate declaration: " + node.getName());
@@ -71,45 +76,46 @@ public class SymbolTableBuilderVisitor implements ASTVisitor {
              if (!table.declare(paramSym)) {
                  diag.addError("Duplicate parameter: " + param.name);
              }
-            // We do NOT call param.accept(this) because visitVarDeclNode would
-            // try to declare it again as Kind.VARIABLE.
-            // Although visitVarDeclNode uses Kind.VARIABLE, we want Kind.PARAMETER.
         }
         node.getBody().accept(this);
         table.exitScope();
+        return null;
     }
 
     @Override
-    public void visitIdentifierNode(IdentifierNode node) {
-        if (node.getName().equals("this")) return;
+    public Void visitIdentifierNode(IdentifierNode node) {
+        if (node.getName().equals("this")) return null;
         if (!table.lookup(node.getName()).isPresent()) {
             diag.addError("Use of undeclared variable: " + node.getName());
         }
+        return null;
     }
 
     @Override
-    public void visitIfNode(IfNode node) {
+    public Void visitIfNode(IfNode node) {
         node.getCond().accept(this);
         node.getThenBlock().accept(this);
         if (node.getElseBlock() != null) {
             node.getElseBlock().accept(this);
         }
+        return null;
     }
 
     @Override
-    public void visitLiteralNode(LiteralNode node) {
-        // Do nothing
+    public Void visitLiteralNode(LiteralNode node) {
+        return null;
     }
 
     @Override
-    public void visitReturnNode(ReturnNode node) {
+    public Void visitReturnNode(ReturnNode node) {
         if (node.getExpr() != null) {
             node.getExpr().accept(this);
         }
+        return null;
     }
 
     @Override
-    public void visitVarDeclNode(VarDeclNode node) {
+    public Void visitVarDeclNode(VarDeclNode node) {
         Symbol sym = new Symbol(node.getName(), Kind.VARIABLE, node);
         if (!table.declare(sym)) {
             diag.addError("Duplicate declaration: " + node.getName());
@@ -117,26 +123,29 @@ public class SymbolTableBuilderVisitor implements ASTVisitor {
         if (node.getInitializer() != null) {
             node.getInitializer().accept(this);
         }
+        return null;
     }
 
     @Override
-    public void visitWhileNode(WhileNode node) {
+    public Void visitWhileNode(WhileNode node) {
         node.getCond().accept(this);
         node.getBody().accept(this);
+        return null;
     }
 
     @Override
-    public void visitUnaryOpNode(UnaryOpNode node) {
+    public Void visitUnaryOpNode(UnaryOpNode node) {
         node.expr.accept(this);
+        return null;
     }
 
     @Override
-    public void visitEmptyNode(EmptyNode emptyNode) {
-        // Do nothing
+    public Void visitEmptyNode(EmptyNode emptyNode) {
+        return null;
     }
 
     @Override
-    public void visitClassDeclNode(ClassDeclNode node) {
+    public Void visitClassDeclNode(ClassDeclNode node) {
         Symbol sym = new Symbol(node.className, Kind.TYPE, node);
         if (!table.declare(sym)) {
             diag.addError("Duplicate declaration: " + node.className);
@@ -149,27 +158,31 @@ public class SymbolTableBuilderVisitor implements ASTVisitor {
             method.accept(this);
         }
         table.exitScope();
+        return null;
     }
 
     @Override
-    public void visitNewExprNode(NewExprNode node) {
+    public Void visitNewExprNode(NewExprNode node) {
         for (ASTNode arg : node.args) {
             arg.accept(this);
         }
+        return null;
     }
 
     @Override
-    public void visitMethodCallNode(MethodCallNode node) {
+    public Void visitMethodCallNode(MethodCallNode node) {
         if (node.object != null) {
             node.object.accept(this);
         }
         for (ASTNode arg : node.args) {
             arg.accept(this);
         }
+        return null;
     }
 
     @Override
-    public void visitMemberAccessNode(MemberAccessNode node) {
+    public Void visitMemberAccessNode(MemberAccessNode node) {
         node.object.accept(this);
+        return null;
     }
 }

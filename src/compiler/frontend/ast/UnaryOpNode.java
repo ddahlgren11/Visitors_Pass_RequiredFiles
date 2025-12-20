@@ -12,8 +12,8 @@ public class UnaryOpNode extends ExpressionNode {
     }
 
     @Override
-    public void accept(ASTVisitor visitor) {
-        visitor.visitUnaryOpNode(this);
+    public <T> T accept(ASTVisitor<T> visitor) {
+        return visitor.visitUnaryOpNode(this);
     }
 
     @Override
