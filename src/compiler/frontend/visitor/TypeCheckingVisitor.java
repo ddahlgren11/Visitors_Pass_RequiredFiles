@@ -92,6 +92,7 @@ public class TypeCheckingVisitor implements ASTVisitor {
 
         // 2. Declare methods
         for (FunctionDeclNode method : node.methods) {
+            if (method.name.equals(node.className)) continue;
             Symbol sym = new Symbol(method.name, Kind.FUNCTION, method);
             if (!table.declare(sym)) {
                 diag.addError("Duplicate method: " + method.name);
@@ -122,13 +123,16 @@ public class TypeCheckingVisitor implements ASTVisitor {
         if (existing.isPresent() && existing.get().declaration() == node) {
             // Already declared, good.
         } else {
-             Symbol funcSym = new Symbol(node.name, Kind.FUNCTION, node);
-             if (!table.declare(funcSym)) {
-                 // Duplicate definition error only if it's not the same node
-                 // But duplicate check is mostly handled by declare returning false.
-                 // We should probably log error if we are here and declare failed?
-                 // But usually pre-pass handles it or ClassDecl handles it.
-                 // If we are here, it means it wasn't pre-declared?
+             boolean isConstructor = (currentClassName != null && node.name.equals(currentClassName));
+             if (!isConstructor) {
+                 Symbol funcSym = new Symbol(node.name, Kind.FUNCTION, node);
+                 if (!table.declare(funcSym)) {
+                     // Duplicate definition error only if it's not the same node
+                     // But duplicate check is mostly handled by declare returning false.
+                     // We should probably log error if we are here and declare failed?
+                     // But usually pre-pass handles it or ClassDecl handles it.
+                     // If we are here, it means it wasn't pre-declared?
+                 }
              }
         }
 
@@ -146,7 +150,8 @@ public class TypeCheckingVisitor implements ASTVisitor {
         node.getBody().accept(this);
 
         // Check return type enforcement
-        if (!"void".equals(node.returnType)) {
+        boolean isConstructor = (currentClassName != null && node.name.equals(currentClassName));
+        if (!"void".equals(node.returnType) && !isConstructor) {
             if (!checkReturn(node.getBody())) {
                 diag.addError("Missing return statement in function: " + node.name);
             }
