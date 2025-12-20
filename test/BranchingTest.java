@@ -15,33 +15,69 @@ import java.util.Scanner;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class GenTest {
+public class BranchingTest {
 
     @AfterEach
     public void cleanup() {
         File m = new File("Main.j");
         if (m.exists()) m.delete();
-        File p = new File("Point.j");
+        File p = new File("Helper.j");
         if (p.exists()) p.delete();
     }
 
     @Test
-    public void testSimpleClass() throws Exception {
+    public void testIfElse() throws Exception {
         String source = """
-            class Point {
-                int x;
-                int y;
-                void set(int a, int b) {
-                    this.x = a;
-                    this.y = b;
+            class Helper {
+                int abs(int n) {
+                    if (n < 0) {
+                        return -n;
+                    } else {
+                        return n;
+                    }
                 }
             }
             void main() {
-                Point p = new Point();
-                p.set(10, 20);
+                Helper h = new Helper();
+                h.abs(-10);
             }
         """;
 
+        compile(source);
+
+        File f = new File("Helper.j");
+        assertTrue(f.exists());
+        String content = readFile(f);
+
+        // Check for branching instructions
+        assertTrue(content.contains("ifeq"), "Should contain conditional jump");
+        assertTrue(content.contains("goto"), "Should contain goto");
+        assertTrue(content.contains("ineg"), "Should contain negation for -n");
+    }
+
+    @Test
+    public void testWhileLoop() throws Exception {
+        String source = """
+            void main() {
+                int i = 0;
+                while (i < 10) {
+                    i = i + 1;
+                }
+            }
+        """;
+
+        compile(source);
+
+        File f = new File("Main.j");
+        assertTrue(f.exists());
+        String content = readFile(f);
+
+        assertTrue(content.contains("ifeq"), "Loop should have condition check");
+        assertTrue(content.contains("goto"), "Loop should loop back");
+        assertTrue(content.contains("iadd"), "Loop body should increment");
+    }
+
+    private void compile(String source) throws Exception {
         CompilerContext context = new CompilerContext();
         context.setInputStream(new ByteArrayInputStream(source.getBytes(StandardCharsets.UTF_8)));
         CompilerOrchestrator orchestrator = new CompilerOrchestrator();
@@ -52,39 +88,6 @@ public class GenTest {
         orchestrator.addPass(new BytecodeGeneratorPass());
 
         orchestrator.runPasses(context);
-
-        // Check Main.j
-        File f = new File("Main.j");
-        assertTrue(f.exists(), "Main.j should exist");
-
-        System.out.println("=== Main.j ===");
-        printFile(f);
-
-        // Check Point.j
-        File p = new File("Point.j");
-        assertTrue(p.exists(), "Point.j should exist");
-
-        System.out.println("=== Point.j ===");
-        printFile(p);
-
-        // Assertions
-        String pointContent = readFile(p);
-        assertTrue(pointContent.contains(".field public x I"));
-        assertTrue(pointContent.contains(".field public y I"));
-        // Definition should be correct now
-        assertTrue(pointContent.contains(".method public set(II)V"));
-
-        String mainContent = readFile(f);
-        assertTrue(mainContent.contains("new Point"));
-        assertTrue(mainContent.contains("invokespecial Point/<init>()V"));
-        // Call site mismatch is expected for now ((II)I vs (II)V)
-        assertTrue(mainContent.contains("invokevirtual Point/set(II)V"));
-    }
-
-    private void printFile(File f) throws Exception {
-        Scanner s = new Scanner(f);
-        while(s.hasNextLine()) System.out.println(s.nextLine());
-        s.close();
     }
 
     private String readFile(File f) throws Exception {

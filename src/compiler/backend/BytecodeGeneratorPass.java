@@ -191,24 +191,32 @@ public class BytecodeGeneratorPass implements CompilerPass {
                  break;
 
              case NEW:
-                 String cls = instr.arg1;
-                 out.println("   new " + cls);
+                 // Backward compatibility or fallback if needed, but we use NEW_ALLOC/NEW_CONSTRUCT now.
+                 // Treat as no-arg instantiation for safety if encountered.
+                 String clsOld = instr.arg1;
+                 out.println("   new " + clsOld);
                  out.println("   dup");
-                 int argc = Integer.parseInt(instr.arg2);
-                 StringBuilder sb = new StringBuilder("(");
-                 for(int i=0; i<argc; i++) sb.append("I"); // Assumes int args if we don't have types?
-                 // Wait, NEW calls constructor. We still lack constructor signature in NEW op!
-                 // TAC NEW instruction doesn't carry signature.
-                 // BytecodeGeneratorPass handles NEW.
-                 // We need to match constructor.
-                 // If we have single constructor, maybe okay?
-                 // But we hardcoded (I...I)V in NEW.
-                 // If constructor takes objects, this fails.
-                 // FIXME: NEW needs signature or arg types.
-                 // Since I didn't update TAC NEW logic, I'll stick to 'I'.
-                 // This is a known limitation.
-                 sb.append(")V");
-                 out.println("   invokespecial " + cls + "/<init>" + sb);
+                 out.println("   invokespecial " + clsOld + "/<init>()V");
+                 storeVar(out, instr.target, true);
+                 break;
+
+             case NEW_ALLOC:
+                 String clsAlloc = instr.arg1;
+                 out.println("   new " + clsAlloc);
+                 out.println("   dup");
+                 // Do NOT store yet. The stack has [ref, ref].
+                 // We leave them there.
+                 // Note: This relies on the fact that subsequent PARAM instructions push args,
+                 // and then NEW_CONSTRUCT consumes [ref, args].
+                 // The other [ref] remains as the result.
+                 break;
+
+             case NEW_CONSTRUCT:
+                 String clsCons = instr.arg1;
+                 String sigCons = instr.arg2;
+                 if (sigCons == null) sigCons = "()V";
+                 out.println("   invokespecial " + clsCons + "/<init>" + sigCons);
+                 // Now stack has [ref] (the initialized object).
                  storeVar(out, instr.target, true);
                  break;
 
@@ -240,11 +248,14 @@ public class BytecodeGeneratorPass implements CompilerPass {
 
              case CALL_VIRTUAL:
                  String mName = instr.arg2;
-                 int args = 0;
+                 String callSig = "()I"; // Default
+
                  if (mName.contains(":")) {
                      String[] p = mName.split(":");
                      mName = p[0];
-                     args = Integer.parseInt(p[1]);
+                     if (p.length > 1) {
+                         callSig = p[1];
+                     }
                  }
 
                  String cName = "Main";
@@ -255,12 +266,17 @@ public class BytecodeGeneratorPass implements CompilerPass {
                      meth = p[1];
                  }
 
-                 StringBuilder callSig = new StringBuilder("(");
-                 for(int i=0; i < args - 1; i++) callSig.append("I"); // Still assuming I
-                 callSig.append(")I"); // Still assuming I return
-
                  out.println("   invokevirtual " + cName + "/" + meth + callSig);
-                 storeVar(out, instr.target, false);
+
+                 String retType = "";
+                 if (callSig.contains(")")) {
+                     retType = callSig.substring(callSig.lastIndexOf(')') + 1);
+                 }
+
+                 if (!retType.equals("V")) {
+                     boolean isRetRef = retType.startsWith("L") || retType.startsWith("[");
+                     storeVar(out, instr.target, isRetRef);
+                 }
                  break;
 
              case GET_FIELD:
