@@ -320,6 +320,40 @@ public class TACConversionPass implements CompilerPass, ASTVisitor {
         String val = lastResult;
         String temp = newTemp();
 
+        if (node.op.equals("post++") || node.op.equals("post--")) {
+            // post++: result is old value, variable is incremented
+            // We need to know the variable name to increment it.
+            // If expr is an IdentifierNode, we can update it.
+            // If it's a MemberAccessNode, we can update field.
+
+            // 1. Result = current value (val)
+            emit(OpCode.STORE_VAR, temp, val, null);
+            lastResult = temp;
+
+            // 2. Increment/Decrement
+            String one = newTemp();
+            emit(OpCode.LOAD_CONST, one, "1", null);
+
+            String updated = newTemp();
+            OpCode mathOp = node.op.equals("post++") ? OpCode.ADD : OpCode.SUB;
+            emit(mathOp, updated, val, one);
+
+            // 3. Store back
+            if (node.expr instanceof IdentifierNode) {
+                String varName = ((IdentifierNode)node.expr).name;
+                emit(OpCode.STORE_VAR, varName, updated, null);
+            } else if (node.expr instanceof MemberAccessNode) {
+                 // Re-evaluating object? No, we have 'val' but we need object ref for PUT_FIELD.
+                 // This is tricky because we consumed the expression visit.
+                 // We need to visit object again or assume 'val' is not enough.
+                 // Since MemberAccessNode visit loads GET_FIELD into 'val', we lost the object ref.
+                 // We should probably handle assignment/increment logic specifically or support lvalues.
+                 // For now, support Identifier only as per test case loop variable `i++`.
+                 throw new RuntimeException("Post-increment only supported for variables currently.");
+            }
+            return;
+        }
+
         OpCode op = switch(node.op) {
             case "!" -> OpCode.NOT;
             case "-" -> OpCode.NEG;

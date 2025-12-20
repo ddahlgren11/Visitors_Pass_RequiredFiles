@@ -3,106 +3,251 @@ Thanks for using JUnit! Support its development at https://junit.org/sponsoring
 
 🟢 Running pass: FrontEndPass (Lexing + Parsing)
 === Starting FrontEndPass ===
-Parsing (best-effort) completed.
+Parsing completed.
 === Finished FrontEndPass ===
 ✅ Completed pass: FrontEndPass (Lexing + Parsing)
 🟢 Running pass: SymbolTableBuilderPass
-[2025-12-01T04:22:51.028048961] === Starting SymbolTableBuilderPass ===
-[2025-12-01T04:22:51.028996875] Created symbol table with global scope.
-[2025-12-01T04:22:51.029259137] Building symbol table from visitor-style frontend.ast AST...
-[2025-12-01T04:22:51.033567808] Symbol table complete: 1 scope(s).
+[2025-12-20T05:49:48.708855757] === Starting SymbolTableBuilderPass ===
+[2025-12-20T05:49:48.710138741] Created symbol table with global scope.
+[2025-12-20T05:49:48.710296134] Building symbol table from visitor-style frontend.ast AST...
+[2025-12-20T05:49:48.712297007] ERROR Use of undeclared variable: z
+[2025-12-20T05:49:48.715790485] Symbol table complete: 1 scope(s).
+✅ Completed pass: SymbolTableBuilderPass
+🟢 Running pass: TypeCheckingPass
+[2025-12-20T05:49:48.717525291] ERROR Undefined identifier: z
+[2025-12-20T05:49:48.72253108] ERROR Type mismatch in assignment: expected unknown, got int
+✅ Completed pass: TypeCheckingPass
+ERROR: [2025-12-20T05:49:48.712297007] ERROR Use of undeclared variable: z
+ERROR: [2025-12-20T05:49:48.717525291] ERROR Undefined identifier: z
+ERROR: [2025-12-20T05:49:48.72253108] ERROR Type mismatch in assignment: expected unknown, got int
+🟢 Running pass: FrontEndPass (Lexing + Parsing)
+=== Starting FrontEndPass ===
+Parsing completed.
+=== Finished FrontEndPass ===
+✅ Completed pass: FrontEndPass (Lexing + Parsing)
+🟢 Running pass: SymbolTableBuilderPass
+✅ Completed pass: SymbolTableBuilderPass
+🟢 Running pass: TypeCheckingPass
+✅ Completed pass: TypeCheckingPass
+[2025-12-20T05:49:48.757661978] === Starting SymbolTableBuilderPass ===
+[2025-12-20T05:49:48.757815162] Created symbol table with global scope.
+[2025-12-20T05:49:48.757886574] Building symbol table from visitor-style frontend.ast AST...
+[2025-12-20T05:49:48.758049468] Symbol table complete: 1 scope(s).
+🟢 Running pass: FrontEndPass (Lexing + Parsing)
+=== Starting FrontEndPass ===
+Parsing completed.
+=== Finished FrontEndPass ===
+✅ Completed pass: FrontEndPass (Lexing + Parsing)
+🟢 Running pass: SymbolTableBuilderPass
+[2025-12-20T05:49:48.765903797] === Starting SymbolTableBuilderPass ===
+[2025-12-20T05:49:48.766005915] Created symbol table with global scope.
+[2025-12-20T05:49:48.766131647] Building symbol table from visitor-style frontend.ast AST...
+[2025-12-20T05:49:48.766334441] Symbol table complete: 1 scope(s).
+✅ Completed pass: SymbolTableBuilderPass
+🟢 Running pass: FrontEndPass (Lexing + Parsing)
+=== Starting FrontEndPass ===
+Parsing completed.
+=== Finished FrontEndPass ===
+✅ Completed pass: FrontEndPass (Lexing + Parsing)
+🟢 Running pass: SymbolTableBuilderPass
+[2025-12-20T05:49:48.768671992] === Starting SymbolTableBuilderPass ===
+[2025-12-20T05:49:48.768856979] Created symbol table with global scope.
+[2025-12-20T05:49:48.769061302] Building symbol table from visitor-style frontend.ast AST...
+[2025-12-20T05:49:48.769242334] Symbol table complete: 1 scope(s).
+✅ Completed pass: SymbolTableBuilderPass
+🟢 Running pass: TypeCheckingPass
+[2025-12-20T05:49:48.769677354] ERROR Type mismatch in initialization of y: expected boolean, got int
+✅ Completed pass: TypeCheckingPass
+🟢 Running pass: FrontEndPass (Lexing + Parsing)
+=== Starting FrontEndPass ===
+Parsing completed.
+=== Finished FrontEndPass ===
+✅ Completed pass: FrontEndPass (Lexing + Parsing)
+🟢 Running pass: SymbolTableBuilderPass
+[2025-12-20T05:49:48.773679475] === Starting SymbolTableBuilderPass ===
+[2025-12-20T05:49:48.773868914] Created symbol table with global scope.
+[2025-12-20T05:49:48.7739358] Building symbol table from visitor-style frontend.ast AST...
+[2025-12-20T05:49:48.774190209] Symbol table complete: 1 scope(s).
 ✅ Completed pass: SymbolTableBuilderPass
 🟢 Running pass: TypeCheckingPass
 ✅ Completed pass: TypeCheckingPass
 🟢 Running pass: FrontEndPass (Lexing + Parsing)
 === Starting FrontEndPass ===
-Parsing (best-effort) completed.
+Parsing completed.
 === Finished FrontEndPass ===
 ✅ Completed pass: FrontEndPass (Lexing + Parsing)
 🟢 Running pass: SymbolTableBuilderPass
-✅ Completed pass: SymbolTableBuilderPass
-🟢 Running pass: TypeCheckingPass
-✅ Completed pass: TypeCheckingPass
-[2025-12-01T04:22:51.06119231] === Starting SymbolTableBuilderPass ===
-[2025-12-01T04:22:51.061298825] Created symbol table with global scope.
-[2025-12-01T04:22:51.061364712] Building symbol table from visitor-style frontend.ast AST...
-[2025-12-01T04:22:51.061504109] Symbol table complete: 1 scope(s).
-🟢 Running pass: FrontEndPass (Lexing + Parsing)
-=== Starting FrontEndPass ===
-Parsing (best-effort) completed.
-=== Finished FrontEndPass ===
-✅ Completed pass: FrontEndPass (Lexing + Parsing)
-🟢 Running pass: SymbolTableBuilderPass
-[2025-12-01T04:22:51.067424895] === Starting SymbolTableBuilderPass ===
-[2025-12-01T04:22:51.067560692] Created symbol table with global scope.
-[2025-12-01T04:22:51.067636624] Building symbol table from visitor-style frontend.ast AST...
-[2025-12-01T04:22:51.067732167] Symbol table complete: 1 scope(s).
-✅ Completed pass: SymbolTableBuilderPass
-🟢 Running pass: FrontEndPass (Lexing + Parsing)
-=== Starting FrontEndPass ===
-Parsing (best-effort) completed.
-=== Finished FrontEndPass ===
-✅ Completed pass: FrontEndPass (Lexing + Parsing)
-🟢 Running pass: SymbolTableBuilderPass
-[2025-12-01T04:22:51.070003014] === Starting SymbolTableBuilderPass ===
-[2025-12-01T04:22:51.070090679] Created symbol table with global scope.
-[2025-12-01T04:22:51.070160459] Building symbol table from visitor-style frontend.ast AST...
-[2025-12-01T04:22:51.07025027] Symbol table complete: 1 scope(s).
+[2025-12-20T05:49:48.777549415] === Starting SymbolTableBuilderPass ===
+[2025-12-20T05:49:48.777658657] Created symbol table with global scope.
+[2025-12-20T05:49:48.777964041] Building symbol table from visitor-style frontend.ast AST...
+[2025-12-20T05:49:48.778283163] Symbol table complete: 1 scope(s).
 ✅ Completed pass: SymbolTableBuilderPass
 🟢 Running pass: TypeCheckingPass
 ✅ Completed pass: TypeCheckingPass
 🟢 Running pass: FrontEndPass (Lexing + Parsing)
 === Starting FrontEndPass ===
-Parsing (best-effort) completed.
+Parsing completed.
 === Finished FrontEndPass ===
 ✅ Completed pass: FrontEndPass (Lexing + Parsing)
 🟢 Running pass: SymbolTableBuilderPass
-[2025-12-01T04:22:51.073028841] === Starting SymbolTableBuilderPass ===
-[2025-12-01T04:22:51.073246925] Created symbol table with global scope.
-[2025-12-01T04:22:51.073316218] Building symbol table from visitor-style frontend.ast AST...
-[2025-12-01T04:22:51.073403663] Symbol table complete: 1 scope(s).
+[2025-12-20T05:49:48.781749019] === Starting SymbolTableBuilderPass ===
+[2025-12-20T05:49:48.781880584] Created symbol table with global scope.
+[2025-12-20T05:49:48.781940072] Building symbol table from visitor-style frontend.ast AST...
+[2025-12-20T05:49:48.782262168] Symbol table complete: 1 scope(s).
 ✅ Completed pass: SymbolTableBuilderPass
 🟢 Running pass: TypeCheckingPass
 ✅ Completed pass: TypeCheckingPass
 🟢 Running pass: FrontEndPass (Lexing + Parsing)
 === Starting FrontEndPass ===
-Parsing (best-effort) completed.
+Parsing completed.
 === Finished FrontEndPass ===
 ✅ Completed pass: FrontEndPass (Lexing + Parsing)
 🟢 Running pass: SymbolTableBuilderPass
-[2025-12-01T04:22:51.075273323] === Starting SymbolTableBuilderPass ===
-[2025-12-01T04:22:51.075361923] Created symbol table with global scope.
-[2025-12-01T04:22:51.075426431] Building symbol table from visitor-style frontend.ast AST...
-[2025-12-01T04:22:51.075555799] Symbol table complete: 1 scope(s).
+[2025-12-20T05:49:48.788719098] === Starting SymbolTableBuilderPass ===
+[2025-12-20T05:49:48.788811389] Created symbol table with global scope.
+[2025-12-20T05:49:48.788893983] Building symbol table from visitor-style frontend.ast AST...
+[2025-12-20T05:49:48.789134484] Symbol table complete: 1 scope(s).
 ✅ Completed pass: SymbolTableBuilderPass
 🟢 Running pass: TypeCheckingPass
 ✅ Completed pass: TypeCheckingPass
+🟢 Running pass: TACConversionPass
+✅ Completed pass: TACConversionPass
+🟢 Running pass: BytecodeGeneratorPass
+[2025-12-20T05:49:48.791352553] Generating Bytecode from 17 TAC instructions...
+✅ Completed pass: BytecodeGeneratorPass
+🟢 Running pass: FrontEndPass (Lexing + Parsing)
+=== Starting FrontEndPass ===
+Parsing completed.
+=== Finished FrontEndPass ===
+✅ Completed pass: FrontEndPass (Lexing + Parsing)
+🟢 Running pass: SymbolTableBuilderPass
+[2025-12-20T05:49:48.80495947] === Starting SymbolTableBuilderPass ===
+[2025-12-20T05:49:48.805141057] Created symbol table with global scope.
+[2025-12-20T05:49:48.805238004] Building symbol table from visitor-style frontend.ast AST...
+[2025-12-20T05:49:48.805386803] Symbol table complete: 1 scope(s).
+✅ Completed pass: SymbolTableBuilderPass
+🟢 Running pass: TypeCheckingPass
+✅ Completed pass: TypeCheckingPass
+🟢 Running pass: TACConversionPass
+✅ Completed pass: TACConversionPass
+🟢 Running pass: BytecodeGeneratorPass
+[2025-12-20T05:49:48.806436642] Generating Bytecode from 30 TAC instructions...
+✅ Completed pass: BytecodeGeneratorPass
+🟢 Running pass: FrontEndPass (Lexing + Parsing)
+=== Starting FrontEndPass ===
+Parsing completed.
+=== Finished FrontEndPass ===
+✅ Completed pass: FrontEndPass (Lexing + Parsing)
+🟢 Running pass: SymbolTableBuilderPass
+[2025-12-20T05:49:48.83175585] === Starting SymbolTableBuilderPass ===
+[2025-12-20T05:49:48.831931196] Created symbol table with global scope.
+[2025-12-20T05:49:48.831997422] Building symbol table from visitor-style frontend.ast AST...
+[2025-12-20T05:49:48.832153254] Symbol table complete: 1 scope(s).
+✅ Completed pass: SymbolTableBuilderPass
+🟢 Running pass: TypeCheckingPass
+✅ Completed pass: TypeCheckingPass
+🟢 Running pass: TACConversionPass
+✅ Completed pass: TACConversionPass
+🟢 Running pass: BytecodeGeneratorPass
+[2025-12-20T05:49:48.832768054] Generating Bytecode from 27 TAC instructions...
+✅ Completed pass: BytecodeGeneratorPass
+=== Main.j ===
+.class public Main
+.super java/lang/Object
+
+.method public <init>()V
+   aload_0
+   invokespecial java/lang/Object/<init>()V
+   return
+.end method
+
+.method public static main([Ljava/lang/String;)V
+   .limit stack 100
+   .limit locals 100
+main:
+   new Point
+   dup
+   invokespecial Point/<init>()V
+   astore 1
+   aload 1
+   astore 2
+   aload 2
+   astore 3
+   aload 3
+   bipush 10
+   istore 4
+   bipush 20
+   istore 5
+   iload 4
+   iload 5
+   invokevirtual Point/set(II)V
+   return
+.end method
+
+=== Point.j ===
+.class public Point
+.super java/lang/Object
+
+.field public x I
+.field public y I
+.method public set(II)V
+   .limit stack 100
+   .limit locals 100
+Point.set:
+   iload 1
+   istore 3
+   aload 0
+   iload 3
+   putfield Point/x I
+   iload 2
+   istore 4
+   aload 0
+   iload 4
+   putfield Point/y I
+   return
+.end method
+
 [36m╷[0m
 [36m├─[0m [36mJUnit Jupiter[0m [32m✔[0m
 [36m│  ├─[0m [36mDiagnosticsTest[0m [32m✔[0m
 [36m│  │  ├─[0m [34mtestUndeclaredVariableReported()[0m [32m✔[0m
 [36m│  │  ├─[0m [34mtestTypeCheckingReportsErrorFromFile()[0m [32m✔[0m
 [36m│  │  └─[0m [34mtestParsingAndSymbolTableFromFile()[0m [32m✔[0m
-[36m│  └─[0m [36mMainTest[0m [32m✔[0m
-[36m│     ├─[0m [34mtestSymbolTableIsBuilt()[0m [32m✔[0m
-[36m│     ├─[0m [34mtestTypeCheckerReportsErrors()[0m [32m✔[0m
-[36m│     ├─[0m [34mtestCompilerPipelineRunsSuccessfully()[0m [32m✔[0m
-[36m│     ├─[0m [34mtestNoErrorsForValidProgram()[0m [32m✔[0m
-[36m│     └─[0m [34mtestStudentsShouldAddMoreCases()[0m [32m✔[0m
+[36m│  ├─[0m [36mMainTest[0m [32m✔[0m
+[36m│  │  ├─[0m [34mtestSymbolTableIsBuilt()[0m [32m✔[0m
+[36m│  │  ├─[0m [34mtestTypeCheckerReportsErrors()[0m [32m✔[0m
+[36m│  │  ├─[0m [34mtestCompilerPipelineRunsSuccessfully()[0m [32m✔[0m
+[36m│  │  ├─[0m [34mtestNoErrorsForValidProgram()[0m [32m✔[0m
+[36m│  │  ├─[0m [34mtestComplexSampleClass()[0m [32m✔[0m
+[36m│  │  └─[0m [34mtestStudentsShouldAddMoreCases()[0m [32m✔[0m
+[36m│  ├─[0m [36mBranchingTest[0m [32m✔[0m
+[36m│  │  ├─[0m [34mtestWhileLoop()[0m [32m✔[0m
+[36m│  │  └─[0m [34mtestIfElse()[0m [32m✔[0m
+[36m│  ├─[0m [36mParserTest[0m [32m✔[0m
+[36m│  │  ├─[0m [34mtestExpressions()[0m [32m✔[0m
+[36m│  │  ├─[0m [34mtestThisMemberAccess()[0m [32m✔[0m
+[36m│  │  ├─[0m [34mtestVariables()[0m [32m✔[0m
+[36m│  │  ├─[0m [34mtestEmptyProgram()[0m [32m✔[0m
+[36m│  │  ├─[0m [34mtestInvalidSyntax()[0m [32m✔[0m
+[36m│  │  ├─[0m [34mtestLoopsAndConditionals()[0m [32m✔[0m
+[36m│  │  ├─[0m [34mtestFactorThis()[0m [32m✔[0m
+[36m│  │  └─[0m [34mtestNestedBlocks()[0m [32m✔[0m
+[36m│  └─[0m [36mGenTest[0m [32m✔[0m
+[36m│     └─[0m [34mtestSimpleClass()[0m [32m✔[0m
 [36m├─[0m [36mJUnit Vintage[0m [32m✔[0m
 [36m└─[0m [36mJUnit Platform Suite[0m [32m✔[0m
 
-Test run finished after 167 ms
-[         5 containers found      ]
+Test run finished after 258 ms
+[         8 containers found      ]
 [         0 containers skipped    ]
-[         5 containers started    ]
+[         8 containers started    ]
 [         0 containers aborted    ]
-[         5 containers successful ]
+[         8 containers successful ]
 [         0 containers failed     ]
-[         8 tests found           ]
+[        20 tests found           ]
 [         0 tests skipped         ]
-[         8 tests started         ]
+[        20 tests started         ]
 [         0 tests aborted         ]
-[         8 tests successful      ]
+[        20 tests successful      ]
 [         0 tests failed          ]
 

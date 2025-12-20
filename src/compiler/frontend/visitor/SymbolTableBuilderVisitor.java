@@ -146,7 +146,20 @@ public class SymbolTableBuilderVisitor implements ASTVisitor {
             field.accept(this);
         }
         for (FunctionDeclNode method : node.methods) {
-            method.accept(this);
+            if (method.name.equals(node.className)) {
+                // Constructor: visit body but do not declare in symbol table to avoid shadowing class
+                table.enterScope();
+                for (VarDeclNode param : method.getParams()) {
+                    Symbol paramSym = new Symbol(param.name, Kind.PARAMETER, param);
+                    if (!table.declare(paramSym)) {
+                        diag.addError("Duplicate parameter: " + param.name);
+                    }
+                }
+                method.getBody().accept(this);
+                table.exitScope();
+            } else {
+                method.accept(this);
+            }
         }
         table.exitScope();
     }
