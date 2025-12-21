@@ -1139,6 +1139,7 @@ FunctionDeclNode n = new FunctionDeclNode(t.image, id.image, params, body);
 
   final public List<VarDeclNode> ParamList() throws ParseException {List<VarDeclNode> params = new ArrayList<>();
     Token t, id;
+    VarDeclNode p;
     switch ((jj_ntk==-1)?jj_ntk_f():jj_ntk) {
     case INT:{
       t = jj_consume_token(INT);
@@ -1154,7 +1155,7 @@ FunctionDeclNode n = new FunctionDeclNode(t.image, id.image, params, body);
       throw new ParseException();
     }
     id = jj_consume_token(IDENTIFIER);
-VarDeclNode p = new VarDeclNode(t.image, id.image, null);
+p = new VarDeclNode(t.image, id.image, null);
         setLoc(p, t);
         params.add(p);
     label_14:
@@ -1325,13 +1326,7 @@ p = new VarDeclNode(t.image, id.image, null);
     return false;
   }
 
-  private boolean jj_3_6()
- {
-    if (jj_3R_FunctionDecl_531_5_17()) return true;
-    return false;
-  }
-
-  private boolean jj_3R_ParamList_553_7_33()
+  private boolean jj_3R_ParamList_554_7_33()
  {
     if (jj_scan_token(COMMA)) return true;
     Token xsp;
@@ -1341,6 +1336,12 @@ p = new VarDeclNode(t.image, id.image, null);
     if (jj_scan_token(45)) return true;
     }
     if (jj_scan_token(IDENTIFIER)) return true;
+    return false;
+  }
+
+  private boolean jj_3_6()
+ {
+    if (jj_3R_FunctionDecl_531_5_17()) return true;
     return false;
   }
 
@@ -1426,13 +1427,7 @@ p = new VarDeclNode(t.image, id.image, null);
     return false;
   }
 
-  private boolean jj_3R_Statement_162_7_44()
- {
-    if (jj_3R_ReturnStmt_197_5_53()) return true;
-    return false;
-  }
-
-  private boolean jj_3R_ParamList_546_5_29()
+  private boolean jj_3R_ParamList_547_5_29()
  {
     Token xsp;
     xsp = jj_scanpos;
@@ -1443,8 +1438,14 @@ p = new VarDeclNode(t.image, id.image, null);
     if (jj_scan_token(IDENTIFIER)) return true;
     while (true) {
       xsp = jj_scanpos;
-      if (jj_3R_ParamList_553_7_33()) { jj_scanpos = xsp; break; }
+      if (jj_3R_ParamList_554_7_33()) { jj_scanpos = xsp; break; }
     }
+    return false;
+  }
+
+  private boolean jj_3R_Statement_162_7_44()
+ {
+    if (jj_3R_ReturnStmt_197_5_53()) return true;
     return false;
   }
 
@@ -1462,7 +1463,7 @@ p = new VarDeclNode(t.image, id.image, null);
 
   private boolean jj_3R_FunctionDecl_533_16_24()
  {
-    if (jj_3R_ParamList_546_5_29()) return true;
+    if (jj_3R_ParamList_547_5_29()) return true;
     return false;
   }
 
@@ -1565,7 +1566,7 @@ p = new VarDeclNode(t.image, id.image, null);
 
   private boolean jj_3R_ConstructorDecl_142_16_21()
  {
-    if (jj_3R_ParamList_546_5_29()) return true;
+    if (jj_3R_ParamList_547_5_29()) return true;
     return false;
   }
 
