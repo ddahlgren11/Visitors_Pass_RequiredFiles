@@ -9,6 +9,7 @@ package compiler.frontend;
 
 import java.util.*;
 import compiler.frontend.ast.*;
+import compiler.infra.SourceLocation;
 
 public class MyParser {
     public static void main(String[] args) {
@@ -24,11 +25,14 @@ public class MyParser {
             System.err.println("PARSE ERROR: " + e.getMessage());
         }
     }
-        /*public MyParser(java.io.Reader reader) {
-            this(new SimpleCharStream(reader, 1, 1));
+
+    private ASTNode setLoc(ASTNode n, Token t) {
+        if (n != null && t != null) {
+            n.setSourceLocation(new SourceLocation(null, t.beginLine, t.beginColumn));
         }
-        */
+        return n;
     }
+}
 
 
 PARSER_END(MyParser)
@@ -123,7 +127,8 @@ ClassDeclNode ClassDecl() :
     )*
     <RBRACE>
     {
-        return new ClassDeclNode(t.image, fields, methods);
+        ClassDeclNode n = new ClassDeclNode(t.image, fields, methods);
+        return (ClassDeclNode) setLoc(n, t);
     }
 }
 
@@ -136,7 +141,8 @@ FunctionDeclNode ConstructorDecl() :
     id=<IDENTIFIER>
     <LPAREN> ( params=ParamList() )? <RPAREN> body=Block()
     {
-        return new FunctionDeclNode(id.image, id.image, params, body);
+        FunctionDeclNode n = new FunctionDeclNode(id.image, id.image, params, body);
+        return (FunctionDeclNode) setLoc(n, id);
     }
 }
 
@@ -167,7 +173,16 @@ ASTNode ExprOrAssignStmt() :
     ( <ASSIGN> rhs=Expression() )?
     <SEMI>
     {
-        if (rhs != null) return new AssignmentNode(e, rhs);
+        if (rhs != null) {
+            AssignmentNode n = new AssignmentNode(e, rhs);
+            // We'd ideally like the location of the assignment operator or the left side,
+            // but e already has a location.
+            // setLoc(n, ???)
+            // Let's use e's location if available? Or we don't track tokens here easily.
+            // Since e is the start, we can copy its location.
+            if (e.getSourceLocation() != null) n.setSourceLocation(e.getSourceLocation());
+            return n;
+        }
         return e;
     }
 }
@@ -176,11 +191,13 @@ ASTNode ExprOrAssignStmt() :
 ASTNode ReturnStmt() :
 {
     ExpressionNode expr = null;
+    Token t;
 }
 {
-    <RETURN> (expr=Expression())? <SEMI>
+    t=<RETURN> (expr=Expression())? <SEMI>
     {
-        return new ReturnNode(expr);
+        ReturnNode n = new ReturnNode(expr);
+        return setLoc(n, t);
     }
 }
 
@@ -192,7 +209,8 @@ ASTNode VarDecl() :
 {
     (t=<INT> | t=<IDENTIFIER>) id=<IDENTIFIER> ( <ASSIGN> expr=Expression() )? <SEMI>
     {
-        return new VarDeclNode(t.image, id.image, expr);
+        VarDeclNode n = new VarDeclNode(t.image, id.image, expr);
+        return setLoc(n, t);
     }
 }
 
@@ -204,7 +222,10 @@ AssignmentNode Assignment() :
 {
     id=<IDENTIFIER> <ASSIGN> expr=Expression() <SEMI>
     {
-        return new AssignmentNode(new IdentifierNode(id.image), expr);
+        IdentifierNode target = new IdentifierNode(id.image);
+        setLoc(target, id);
+        AssignmentNode n = new AssignmentNode(target, expr);
+        return (AssignmentNode) setLoc(n, id);
     }
 }
 
@@ -227,7 +248,11 @@ ExpressionNode LogicalOr() :
 }
 {
     left=LogicalAnd() ( op=<OR> right=LogicalAnd()
-        { left = new BinaryOpNode(op.image, left, right); }
+        {
+          BinaryOpNode n = new BinaryOpNode(op.image, left, right);
+          setLoc(n, op); // Use operator location for binary op
+          left = n;
+        }
     )*
     { return left; }
 }
@@ -238,7 +263,11 @@ ExpressionNode LogicalAnd() :
 }
 {
     left=Equality() ( op=<AND> right=Equality()
-        { left = new BinaryOpNode(op.image, left, right); }
+        {
+          BinaryOpNode n = new BinaryOpNode(op.image, left, right);
+          setLoc(n, op);
+          left = n;
+        }
     )*
     { return left; }
 }
@@ -250,7 +279,11 @@ ExpressionNode Equality() :
 {
     left=Relational() 
     ( (op=<EQ> | op=<NEQ>) right=Relational()
-        { left = new BinaryOpNode(op.image, left, right); }
+        {
+          BinaryOpNode n = new BinaryOpNode(op.image, left, right);
+          setLoc(n, op);
+          left = n;
+        }
     )*
     { return left; }
 }
@@ -262,7 +295,11 @@ ExpressionNode Relational() :
 {
     left = Additive() 
     ( (op=<LT> | op=<GT>) right=Additive()
-        { left = new BinaryOpNode(op.image, left, right); }
+        {
+          BinaryOpNode n = new BinaryOpNode(op.image, left, right);
+          setLoc(n, op);
+          left = n;
+        }
     )*
     { return left; }
 }
@@ -274,7 +311,11 @@ ExpressionNode Additive() :
 {
     left = Term()
     ( (op=<PLUS> | op=<MINUS>) right=Term()
-        { left = new BinaryOpNode(op.image, left, right); }
+        {
+          BinaryOpNode n = new BinaryOpNode(op.image, left, right);
+          setLoc(n, op);
+          left = n;
+        }
     )*
     { return left; }
 }
@@ -286,7 +327,11 @@ ExpressionNode Term() :
 {
     left = UnaryExpression()
     ( (op=<MULT> | op=<DIV>) right=UnaryExpression()
-        { left = new BinaryOpNode(op.image, left, right); }
+        {
+          BinaryOpNode n = new BinaryOpNode(op.image, left, right);
+          setLoc(n, op);
+          left = n;
+        }
     )*
     { return left; }
 }
@@ -297,7 +342,10 @@ ExpressionNode UnaryExpression() :
 }
 {
       ( op=<PLUS> | op=<MINUS> | op=<NOT> ) e=UnaryExpression()
-      { return new UnaryOpNode(op.image, e); }
+      {
+          UnaryOpNode n = new UnaryOpNode(op.image, e);
+          return (UnaryOpNode) setLoc(n, op);
+      }
     | e=Factor()
       { return e; }
 }
@@ -308,30 +356,41 @@ ExpressionNode Factor() :
 }
 {
     (
-          t=<INT_LITERAL> { n = new LiteralNode(t.image); }
-        | t=<STRING_LITERAL> { n = new LiteralNode(t.image); }
-        | t=<TRUE> { n = new LiteralNode("true"); }
-        | t=<FALSE> { n = new LiteralNode("false"); }
-        | t=<NULL> { n = new LiteralNode("null"); }
-        | t=<THIS> { n = new IdentifierNode("this"); }
+          t=<INT_LITERAL> { n = new LiteralNode(t.image); setLoc(n, t); }
+        | t=<STRING_LITERAL> { n = new LiteralNode(t.image); setLoc(n, t); }
+        | t=<TRUE> { n = new LiteralNode("true"); setLoc(n, t); }
+        | t=<FALSE> { n = new LiteralNode("false"); setLoc(n, t); }
+        | t=<NULL> { n = new LiteralNode("null"); setLoc(n, t); }
+        | t=<THIS> { n = new IdentifierNode("this"); setLoc(n, t); }
         | n=NewExpr()
         | <LPAREN> n=Expression() <RPAREN>
         | t=<IDENTIFIER>
           (
               <LPAREN> [ args=ArgList() ] <RPAREN>
-              { n = new MethodCallNode(null, t.image, args == null ? new ArrayList<>() : args); args = null; }
+              {
+                  n = new MethodCallNode(null, t.image, args == null ? new ArrayList<>() : args);
+                  args = null;
+                  setLoc(n, t);
+              }
             |
-              { n = new IdentifierNode(t.image); }
+              { n = new IdentifierNode(t.image); setLoc(n, t); }
           )
     )
     (
          LOOKAHEAD(<DOT> <IDENTIFIER> <LPAREN>) <DOT> t=<IDENTIFIER> <LPAREN> [ args=ArgList() ] <RPAREN>
-         { n = new MethodCallNode(n, t.image, args == null ? new ArrayList<>() : args); args = null; }
+         {
+             n = new MethodCallNode(n, t.image, args == null ? new ArrayList<>() : args);
+             args = null;
+             setLoc(n, t);
+         }
        |
          <DOT> t=<IDENTIFIER>
-         { n = new MemberAccessNode(n, t.image); }
+         {
+             n = new MemberAccessNode(n, t.image);
+             setLoc(n, t);
+         }
        |
-         <INCR> { n = new UnaryOpNode("post++", n); }
+         <INCR> { n = new UnaryOpNode("post++", n); if(n.getSourceLocation()==null && n instanceof UnaryOpNode) ((UnaryOpNode)n).expr.getSourceLocation(); /* approx */ }
        |
          <DECR> { n = new UnaryOpNode("post--", n); }
     )*
@@ -341,10 +400,14 @@ ExpressionNode Factor() :
 ExpressionNode NewExpr() :
 {
     Token t; List<ExpressionNode> args = new ArrayList<>();
+    Token start;
 }
 {
-    <NEW> t=<IDENTIFIER> <LPAREN> [ args=ArgList() ] <RPAREN>
-    { return new NewExprNode(t.image, args); }
+    start=<NEW> t=<IDENTIFIER> <LPAREN> [ args=ArgList() ] <RPAREN>
+    {
+        NewExprNode n = new NewExprNode(t.image, args);
+        return (NewExprNode) setLoc(n, start);
+    }
 }
 
 List<ExpressionNode> ArgList() :
@@ -362,26 +425,30 @@ List<ExpressionNode> ArgList() :
 ASTNode IfStmt() :
 {
     ExpressionNode cond; ASTNode thenBlock; ASTNode elseBlock=null;
+    Token t;
 }
 {
-    <IF> <LPAREN> cond=Expression() <RPAREN> thenBlock=Block()
+    t=<IF> <LPAREN> cond=Expression() <RPAREN> thenBlock=Block()
     ( <ELSE> (
           LOOKAHEAD(1) elseBlock=Block()
         | elseBlock=IfStmt()
     ) )?
     {
-        return new IfNode(cond, thenBlock, elseBlock);
+        IfNode n = new IfNode(cond, thenBlock, elseBlock);
+        return setLoc(n, t);
     }
 }
 
 ASTNode WhileStmt() :
 {
     ExpressionNode cond; BlockNode body;
+    Token t;
 }
 {
-    <WHILE> <LPAREN> cond=Expression() <RPAREN> body=Block()
+    t=<WHILE> <LPAREN> cond=Expression() <RPAREN> body=Block()
     {
-        return new WhileNode(cond, body);
+        WhileNode n = new WhileNode(cond, body);
+        return setLoc(n, t);
     }
 }
 
@@ -393,7 +460,8 @@ VarDeclNode VarDeclForLoop() :
 {
     (t=<INT> | t=<IDENTIFIER>) id=<IDENTIFIER> ( <ASSIGN> expr=Expression() )?
     {
-        return new VarDeclNode(t.image, id.image, expr);
+        VarDeclNode n = new VarDeclNode(t.image, id.image, expr);
+        return (VarDeclNode) setLoc(n, t);
     }
 }
 
@@ -404,16 +472,20 @@ AssignmentNode AssignmentForLoop() :
 {
     id=<IDENTIFIER> <ASSIGN> expr=Expression()
     {
-        return new AssignmentNode(new IdentifierNode(id.image), expr);
+        IdentifierNode target = new IdentifierNode(id.image);
+        setLoc(target, id);
+        AssignmentNode n = new AssignmentNode(target, expr);
+        return (AssignmentNode) setLoc(n, id);
     }
 }
 
 ASTNode ForStmt() :
 {
     ExpressionNode cond=null, update=null; BlockNode body; VarDeclNode vardeclinit=null; AssignmentNode assignmentinit=null;
+    Token t;
 }
 {
-    <FOR> <LPAREN>
+    t=<FOR> <LPAREN>
         [
             LOOKAHEAD(VarDeclForLoop()) vardeclinit=VarDeclForLoop()
           | assignmentinit=AssignmentForLoop()
@@ -429,37 +501,25 @@ ASTNode ForStmt() :
         else if (assignmentinit != null) {
             returnMe = new ForNode(assignmentinit, cond, update, body);
         }
-        // Handle empty init? ForNode requires init?
-        // If both null, we might need a ForNode that accepts null init, or EmptyNode?
-        // The AST definition implies StatementNode init.
-        // I will assume one is required or I create an EmptyNode wrapper?
-        // But ForNode constructor takes StatementNode.
+
         if (returnMe == null) {
-             // throw new RuntimeException("For loop init required");
-             // Actually, if both are null, we can pass null?
-             // Checking ForNode.java: constructor: public ForNode(StatementNode init, ExpressionNode condition, ExpressionNode update, StatementNode body)
-             // So it expects StatementNode.
-             // If nothing provided, we should probably pass a dummy EmptyNode or null if it handles it.
-             // I'll assume null is allowed or create EmptyNode.
-             // However, `[ ... ]` makes it optional in grammar.
-             // If neither matches, it is null.
-             // I'll pass null for now, hoping ForNode handles it or I check.
-             // Actually, ForNode extends StatementNode.
              returnMe = new ForNode((StatementNode)null, cond, update, body);
         }
 
-        return returnMe;
+        return setLoc(returnMe, t);
     }
 }
 
 BlockNode Block() :
 {
     List<ASTNode> stmts = new ArrayList<>(); ASTNode s;
+    Token t;
 }
 {
-    <LBRACE> ( s=Statement() { stmts.add(s); } )* <RBRACE>
+    t=<LBRACE> ( s=Statement() { stmts.add(s); } )* <RBRACE>
     {
-        return new BlockNode(stmts);
+        BlockNode n = new BlockNode(stmts);
+        return (BlockNode) setLoc(n, t);
     }
 }
 
@@ -472,7 +532,8 @@ ASTNode FunctionDecl() :
     (t=<VOID> | t=<INT> | t=<IDENTIFIER>) id=<IDENTIFIER>
     <LPAREN> ( params=ParamList() )? <RPAREN> body=Block()
     {
-        return new FunctionDeclNode(t.image, id.image, params, body);
+        FunctionDeclNode n = new FunctionDeclNode(t.image, id.image, params, body);
+        return (FunctionDeclNode) setLoc(n, t);
     }
 }
 
@@ -483,10 +544,18 @@ List<VarDeclNode> ParamList() :
 }
 {
     ( t=<INT> | t=<IDENTIFIER> ) id=<IDENTIFIER>
-    { params.add(new VarDeclNode(t.image, id.image, null)); }
+    {
+        VarDeclNode p = new VarDeclNode(t.image, id.image, null);
+        setLoc(p, t);
+        params.add(p);
+    }
 
     ( <COMMA> ( t=<INT> | t=<IDENTIFIER> ) id=<IDENTIFIER>
-      { params.add(new VarDeclNode(t.image, id.image, null)); }
+      {
+        VarDeclNode p = new VarDeclNode(t.image, id.image, null);
+        setLoc(p, t);
+        params.add(p);
+      }
     )*
 
     { return params; }
