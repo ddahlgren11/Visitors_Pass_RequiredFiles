@@ -3,6 +3,7 @@
 package compiler.frontend;
 import java.util.*;
 import compiler.frontend.ast.*;
+import compiler.infra.SourceLocation;
 
 /** Token Manager. */
 @SuppressWarnings ("unused")

@@ -10,8 +10,8 @@ import java.util.stream.Collectors;
 public class SymbolTableImpl implements SymbolTable {
 
     // Stack of Maps: each Map represents a scope (block/function) and holds Symbols.
-    // The top of the stack is always the current, innermost scope.
-    private final Stack<Map<String, Symbol>> scopes;
+    // The top of the stack (end of list) is always the current, innermost scope.
+    private final List<Map<String, Symbol>> scopes;
     // Tracks the current nesting level. 0 is the global scope.
     private int currentLevel;
 
@@ -19,7 +19,7 @@ public class SymbolTableImpl implements SymbolTable {
      * Initializes the symbol table with an empty stack.
      */
     public SymbolTableImpl() {
-        this.scopes = new Stack<>();
+        this.scopes = new ArrayList<>();
         this.currentLevel = -1; // -1 means no scope entered yet
     }
 
@@ -28,7 +28,7 @@ public class SymbolTableImpl implements SymbolTable {
      */
     @Override
     public void enterScope() {
-        scopes.push(new HashMap<>());
+        scopes.add(new HashMap<>());
         currentLevel++;
     }
 
@@ -41,7 +41,7 @@ public class SymbolTableImpl implements SymbolTable {
         if (scopes.isEmpty()) {
             throw new IllegalStateException("Cannot exit scope: Symbol table stack is empty.");
         }
-        scopes.pop();
+        scopes.remove(scopes.size() - 1);
         currentLevel--;
     }
 
@@ -57,7 +57,7 @@ public class SymbolTableImpl implements SymbolTable {
             throw new IllegalStateException("Cannot declare: No scope entered.");
         }
 
-        Map<String, Symbol> currentScope = scopes.peek();
+        Map<String, Symbol> currentScope = scopes.get(scopes.size() - 1);
 
         // Check for local duplicate
         if (currentScope.containsKey(symbol.name())) {
@@ -76,7 +76,7 @@ public class SymbolTableImpl implements SymbolTable {
         if (scopes.isEmpty()) {
             return Optional.empty();
         }
-        return Optional.ofNullable(scopes.peek().get(name));
+        return Optional.ofNullable(scopes.get(scopes.size() - 1).get(name));
     }
 
     /**

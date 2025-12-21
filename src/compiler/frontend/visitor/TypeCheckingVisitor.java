@@ -2,10 +2,9 @@ package compiler.frontend.visitor;
 
 import compiler.frontend.ast.*;
 import compiler.infra.Diagnostics;
+import compiler.infra.SourceLocation;
 import compiler.middle.*;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 public class TypeCheckingVisitor implements ASTVisitor<Void> {
@@ -47,6 +46,11 @@ public class TypeCheckingVisitor implements ASTVisitor<Void> {
         return "boolean".equals(type);
     }
 
+    // Helper to report error with location
+    private void reportError(ASTNode node, String message) {
+        diag.reportError(message, node != null ? node.getSourceLocation() : null);
+    }
+
     // --- Visitor Methods ---
 
     @Override
@@ -85,7 +89,7 @@ public class TypeCheckingVisitor implements ASTVisitor<Void> {
         for (VarDeclNode field : node.fields) {
             Symbol sym = new Symbol(field.name, Kind.VARIABLE, field);
             if (!table.declare(sym)) {
-                diag.addError("Duplicate field: " + field.name);
+                reportError(field, "Duplicate field: " + field.name);
             }
         }
 
@@ -93,7 +97,7 @@ public class TypeCheckingVisitor implements ASTVisitor<Void> {
         for (FunctionDeclNode method : node.methods) {
             Symbol sym = new Symbol(method.name, Kind.FUNCTION, method);
             if (!table.declare(sym)) {
-                diag.addError("Duplicate method: " + method.name);
+                reportError(method, "Duplicate method: " + method.name);
             }
         }
 
@@ -131,7 +135,7 @@ public class TypeCheckingVisitor implements ASTVisitor<Void> {
         for (VarDeclNode param : node.getParams()) {
             Symbol sym = new Symbol(param.name, Kind.PARAMETER, param);
             if (!table.declare(sym)) {
-                diag.addError("Duplicate parameter: " + param.name);
+                reportError(param, "Duplicate parameter: " + param.name);
             }
         }
 
@@ -141,7 +145,7 @@ public class TypeCheckingVisitor implements ASTVisitor<Void> {
         // Check return type enforcement
         if (!"void".equals(node.returnType)) {
             if (!checkReturn(node.getBody())) {
-                diag.addError("Missing return statement in function: " + node.name);
+                reportError(node, "Missing return statement in function: " + node.name);
             }
         }
 
@@ -177,7 +181,7 @@ public class TypeCheckingVisitor implements ASTVisitor<Void> {
         } else {
             Symbol sym = new Symbol(node.name, Kind.VARIABLE, node);
             if (!table.declare(sym)) {
-                diag.addError("Duplicate variable: " + node.name);
+                reportError(node, "Duplicate variable: " + node.name);
             }
         }
 
@@ -185,7 +189,7 @@ public class TypeCheckingVisitor implements ASTVisitor<Void> {
             node.getInitializer().accept(this);
             String initType = getType(node.getInitializer());
             if (initType != null && !isCompatible(node.type, initType)) {
-                diag.addError("Type mismatch in initialization of " + node.name + ": expected " + node.type + ", got " + initType);
+                reportError(node, "Type mismatch in initialization of " + node.name + ": expected " + node.type + ", got " + initType);
             }
         }
         return null;
@@ -201,7 +205,7 @@ public class TypeCheckingVisitor implements ASTVisitor<Void> {
 
         if (targetType != null && exprType != null) {
             if (!isCompatible(targetType, exprType)) {
-                diag.addError("Type mismatch in assignment: expected " + targetType + ", got " + exprType);
+                reportError(node, "Type mismatch in assignment: expected " + targetType + ", got " + exprType);
             }
         }
         return null;
@@ -243,28 +247,28 @@ public class TypeCheckingVisitor implements ASTVisitor<Void> {
                 } else if (op.equals("+") && (leftType.equals("String") || rightType.equals("String"))) {
                     setType(node, "String"); // String concatenation
                 } else {
-                    diag.addError("Operator " + op + " requires numeric operands.");
+                    reportError(node, "Operator " + op + " requires numeric operands.");
                     setType(node, "int"); // Fallback
                 }
         } else if (op.equals("<") || op.equals(">") || op.equals("<=") || op.equals(">=")) {
              if (isNumeric(leftType) && isNumeric(rightType)) {
                     setType(node, "boolean");
                 } else {
-                    diag.addError("Operator " + op + " requires numeric operands.");
+                    reportError(node, "Operator " + op + " requires numeric operands.");
                     setType(node, "boolean");
                 }
         } else if (op.equals("&&") || op.equals("||")) {
              if (isBoolean(leftType) && isBoolean(rightType)) {
                     setType(node, "boolean");
                 } else {
-                    diag.addError("Operator " + op + " requires boolean operands.");
+                    reportError(node, "Operator " + op + " requires boolean operands.");
                     setType(node, "boolean");
                 }
         } else if (op.equals("==") || op.equals("!=")) {
              if (isCompatible(leftType, rightType) || isCompatible(rightType, leftType)) {
                     setType(node, "boolean");
                 } else {
-                    diag.addError("Operator " + op + " requires compatible operands.");
+                    reportError(node, "Operator " + op + " requires compatible operands.");
                     setType(node, "boolean");
                 }
         } else {
@@ -280,10 +284,10 @@ public class TypeCheckingVisitor implements ASTVisitor<Void> {
 
         if (node.op.equals("!")) {
             if (isBoolean(type)) setType(node, "boolean");
-            else diag.addError("Operator ! requires boolean operand.");
+            else reportError(node, "Operator ! requires boolean operand.");
         } else if (node.op.equals("-") || node.op.equals("+") || node.op.contains("++") || node.op.contains("--")) {
             if (isNumeric(type)) setType(node, "int");
-            else diag.addError("Operator " + node.op + " requires numeric operand.");
+            else reportError(node, "Operator " + node.op + " requires numeric operand.");
         }
         return null;
     }
@@ -294,7 +298,7 @@ public class TypeCheckingVisitor implements ASTVisitor<Void> {
             if (currentClassName != null) {
                 setType(node, currentClassName);
             } else {
-                diag.addError("'this' used outside of class context.");
+                reportError(node, "'this' used outside of class context.");
                 setType(node, "unknown");
             }
             return null;
@@ -306,12 +310,13 @@ public class TypeCheckingVisitor implements ASTVisitor<Void> {
             if (s.declaration() instanceof VarDeclNode) {
                 setType(node, ((VarDeclNode) s.declaration()).type);
             } else if (s.declaration() instanceof FunctionDeclNode) {
+                 // Functions used as values not really supported except in calls, but let's handle gracefull
                  setType(node, "unknown");
             } else {
                 setType(node, "unknown");
             }
         } else {
-            diag.addError("Undefined identifier: " + node.name);
+            reportError(node, "Undefined identifier: " + node.name);
             setType(node, "unknown");
         }
         return null;
@@ -340,7 +345,7 @@ public class TypeCheckingVisitor implements ASTVisitor<Void> {
             node.object.accept(this);
             String objType = getType(node.object);
             if (objType == null || isPrimitive(objType)) {
-                diag.addError("Cannot call method on primitive or null type: " + objType);
+                reportError(node.object, "Cannot call method on primitive or null type: " + objType);
                 return null;
             }
             className = objType;
@@ -365,7 +370,7 @@ public class TypeCheckingVisitor implements ASTVisitor<Void> {
                 return null;
             }
 
-            diag.addError("Method not found: " + node.methodName);
+            reportError(node, "Method not found: " + node.methodName);
             return null;
         }
 
@@ -373,7 +378,7 @@ public class TypeCheckingVisitor implements ASTVisitor<Void> {
         if (className != null) {
             Optional<Symbol> classSym = table.lookup(className);
             if (!classSym.isPresent() || classSym.get().kind() != Kind.TYPE) {
-                diag.addError("Undefined class: " + className);
+                reportError(node, "Undefined class: " + className);
                 return null;
             }
             ClassDeclNode classDecl = (ClassDeclNode) classSym.get().declaration();
@@ -381,7 +386,7 @@ public class TypeCheckingVisitor implements ASTVisitor<Void> {
             // 3. Lookup Method in Class
             FunctionDeclNode method = findMethod(classDecl, node.methodName);
             if (method == null) {
-                diag.addError("Method " + node.methodName + " not found in class " + className);
+                reportError(node, "Method " + node.methodName + " not found in class " + className);
                 return null;
             }
 
@@ -392,7 +397,7 @@ public class TypeCheckingVisitor implements ASTVisitor<Void> {
 
     private void checkMethodCall(MethodCallNode node, FunctionDeclNode method) {
         if (node.args.size() != method.params.size()) {
-            diag.addError("Method " + method.name + " expects " + method.params.size() + " arguments, got " + node.args.size());
+            reportError(node, "Method " + method.name + " expects " + method.params.size() + " arguments, got " + node.args.size());
             return;
         }
 
@@ -403,7 +408,7 @@ public class TypeCheckingVisitor implements ASTVisitor<Void> {
             String paramType = method.params.get(i).type;
 
             if (!isCompatible(paramType, argType)) {
-                diag.addError("Argument " + (i+1) + " type mismatch: expected " + paramType + ", got " + argType);
+                reportError(arg, "Argument " + (i+1) + " type mismatch: expected " + paramType + ", got " + argType);
             }
         }
 
@@ -421,17 +426,20 @@ public class TypeCheckingVisitor implements ASTVisitor<Void> {
     public Void visitNewExprNode(NewExprNode node) {
         Optional<Symbol> sym = table.lookup(node.className);
         if (!sym.isPresent() || sym.get().kind() != Kind.TYPE) {
-            diag.addError("Undefined class: " + node.className);
+            reportError(node, "Undefined class: " + node.className);
             setType(node, "unknown");
             return null;
         }
 
         ClassDeclNode classDecl = (ClassDeclNode) sym.get().declaration();
-        FunctionDeclNode constructor = findMethod(classDecl, node.className);
+        FunctionDeclNode constructor = findMethod(classDecl, node.className); // Constructor has same name as class? Usually yes in Java.
+        // Wait, the grammar uses ConstructorDecl which sets name=id.image.
+        // Let's verify if ConstructorDecl correctly sets the name.
+        // Yes: return new FunctionDeclNode(id.image, id.image, params, body);
 
         if (constructor != null) {
              if (node.args.size() != constructor.params.size()) {
-                diag.addError("Constructor " + node.className + " expects " + constructor.params.size() + " arguments, got " + node.args.size());
+                reportError(node, "Constructor " + node.className + " expects " + constructor.params.size() + " arguments, got " + node.args.size());
             } else {
                  for (int i = 0; i < node.args.size(); i++) {
                     ExpressionNode arg = node.args.get(i);
@@ -439,13 +447,13 @@ public class TypeCheckingVisitor implements ASTVisitor<Void> {
                     String argType = getType(arg);
                     String paramType = constructor.params.get(i).type;
                     if (!isCompatible(paramType, argType)) {
-                         diag.addError("Constructor Argument " + (i+1) + " type mismatch.");
+                         reportError(arg, "Constructor Argument " + (i+1) + " type mismatch.");
                     }
                 }
             }
         } else {
             if (node.args.size() > 0) {
-                 diag.addError("No matching constructor for " + node.className);
+                 reportError(node, "No matching constructor for " + node.className);
             }
         }
 
@@ -459,13 +467,13 @@ public class TypeCheckingVisitor implements ASTVisitor<Void> {
         String objType = getType(node.object);
 
         if (objType == null || isPrimitive(objType)) {
-            diag.addError("Cannot access member of non-object type: " + objType);
+            reportError(node, "Cannot access member of non-object type: " + objType);
             return null;
         }
 
         Optional<Symbol> classSym = table.lookup(objType);
         if (!classSym.isPresent()) {
-             diag.addError("Class not found: " + objType);
+             reportError(node, "Class not found: " + objType);
              return null;
         }
 
@@ -477,7 +485,7 @@ public class TypeCheckingVisitor implements ASTVisitor<Void> {
             }
         }
 
-        diag.addError("Field " + node.memberName + " not found in class " + objType);
+        reportError(node, "Field " + node.memberName + " not found in class " + objType);
         setType(node, "unknown");
         return null;
     }
@@ -489,11 +497,11 @@ public class TypeCheckingVisitor implements ASTVisitor<Void> {
                 node.getExpr().accept(this);
                 String actual = getType(node.getExpr());
                 if (!isCompatible(currentMethodReturnType, actual)) {
-                    diag.addError("Return type mismatch: expected " + currentMethodReturnType + ", got " + actual);
+                    reportError(node, "Return type mismatch: expected " + currentMethodReturnType + ", got " + actual);
                 }
             } else {
                 if (!"void".equals(currentMethodReturnType)) {
-                    diag.addError("Missing return value for non-void function.");
+                    reportError(node, "Missing return value for non-void function.");
                 }
             }
         }
@@ -505,7 +513,7 @@ public class TypeCheckingVisitor implements ASTVisitor<Void> {
 
     @Override public Void visitIfNode(IfNode node) {
         node.getCond().accept(this);
-        if (!isBoolean(getType(node.getCond()))) diag.addError("If condition must be boolean");
+        if (!isBoolean(getType(node.getCond()))) reportError(node.getCond(), "If condition must be boolean");
         node.getThenBlock().accept(this);
         if (node.getElseBlock() != null) node.getElseBlock().accept(this);
         return null;
@@ -513,7 +521,7 @@ public class TypeCheckingVisitor implements ASTVisitor<Void> {
 
     @Override public Void visitWhileNode(WhileNode node) {
         node.getCond().accept(this);
-        if (!isBoolean(getType(node.getCond()))) diag.addError("While condition must be boolean");
+        if (!isBoolean(getType(node.getCond()))) reportError(node.getCond(), "While condition must be boolean");
         node.getBody().accept(this);
         return null;
     }
@@ -523,7 +531,7 @@ public class TypeCheckingVisitor implements ASTVisitor<Void> {
         if (node.getInit() != null) node.getInit().accept(this);
         if (node.getCond() != null) {
             node.getCond().accept(this);
-            if (!isBoolean(getType(node.getCond()))) diag.addError("For condition must be boolean");
+            if (!isBoolean(getType(node.getCond()))) reportError(node.getCond(), "For condition must be boolean");
         }
         if (node.getUpdate() != null) node.getUpdate().accept(this);
         node.getBody().accept(this);
