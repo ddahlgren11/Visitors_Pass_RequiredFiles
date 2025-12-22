@@ -52,7 +52,7 @@ TOKEN : { < INT: "int" > }
 TOKEN : { < TRUE: "true" > }
 TOKEN : { < FALSE: "false" > }
 TOKEN : { < NULL: "null" > }
-TOKEN : { < NEW: "new" > }     
+TOKEN : { < NEW: "new" > }
 
 TOKEN : { < CLASS: "class" > }
 TOKEN : { < PUBLIC: "public" > }
@@ -277,7 +277,7 @@ ExpressionNode Equality() :
     ExpressionNode left, right; Token op;
 }
 {
-    left=Relational() 
+    left=Relational()
     ( (op=<EQ> | op=<NEQ>) right=Relational()
         {
           BinaryOpNode n = new BinaryOpNode(op.image, left, right);
@@ -293,7 +293,7 @@ ExpressionNode Relational() :
     ExpressionNode left, right; Token op;
 }
 {
-    left = Additive() 
+    left = Additive()
     ( (op=<LT> | op=<GT>) right=Additive()
         {
           BinaryOpNode n = new BinaryOpNode(op.image, left, right);
@@ -539,7 +539,7 @@ ASTNode FunctionDecl() :
 
 List<VarDeclNode> ParamList() :
 {
-    List<VarDeclNode> params = new ArrayList<>(); 
+    List<VarDeclNode> params = new ArrayList<>();
     Token t, id;
     VarDeclNode p;
 }
